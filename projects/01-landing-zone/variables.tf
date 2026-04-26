@@ -36,3 +36,8 @@ variable "tags" {
   description = "Default tags applied to all resources"
   # Tagging everything is mandatory in production for cost allocation, resource management, and governance compliance
 }
+variable "allowed_locations" {
+  type        = list(string)
+  default     = ["uksouth", "ukwest"]
+  description = "Azure regions permitted by the Allowed Locations policy assignment"
+}

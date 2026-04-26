@@ -27,10 +27,10 @@ module "networking" {
 module "security" {
   source = "../../modules/security"
 
-  location            = var.location
-  environment         = var.environment
-  resource_prefix     = local.resource_prefix
-  resource_group_name = azurerm_resource_group.main.name
-  tags                = var.tags
-  # The security module handles NSG rules and Azure Policy assignments
+  location              = var.location
+  environment           = var.environment
+  resource_prefix       = local.resource_prefix
+  resource_group_name   = azurerm_resource_group.main.name
+  tags                  = var.tags
+  allowed_locations     = var.allowed_locations
 }
