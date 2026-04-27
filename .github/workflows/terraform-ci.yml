@@ -126,7 +126,7 @@ jobs:
       # Infracost generates cost estimates for cloud resources.
       # See https://www.infracost.io/docs/
       - name: Setup Infracost
-        uses: infracost/actions/setup@v2
+        uses: infracost/actions/setup@v3
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
