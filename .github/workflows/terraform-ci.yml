@@ -1,0 +1,142 @@
+name: Terraform CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "modules/**"
+      - "projects/**"
+      - ".github/workflows/terraform-*.yml"
+  workflow_dispatch:
+
+# Cancel any previous run for the same PR when new commits arrive.
+# This prevents stale fmt/validate results from holding up the merge queue.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Minimum permissions — fmt/validate/checkov only read the repo.
+# The cost job upgrades to pull-requests: write for posting comments.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ── 1. Format ──────────────────────────────────────────────────────────────────
+  fmt:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: terraform fmt
+        # -recursive catches both modules/ and projects/ in a single pass
+        run: terraform fmt -check -recursive
+
+  # ── 2. Validate ────────────────────────────────────────────────────────────────
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/01-landing-zone
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: terraform init
+        # -backend=false skips the azurerm backend so no storage-account credentials
+        # are needed on PRs. Provider binaries are still downloaded, which is
+        # required for `terraform validate` to resolve provider schemas.
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        run: terraform validate
+
+  # ── 3. Security Scan ───────────────────────────────────────────────────────────
+  checkov:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov
+        # --soft-fail + --hard-fail-on: report MEDIUM/LOW findings without failing
+        # the pipeline; exit 1 only on HIGH or CRITICAL — matches project policy.
+        #
+        # Suppressed checks (add new entries here with justification):
+        #
+        # CKV2_AZURE_31 (HIGH) — NSG/VNet flow logs require an
+        #   azurerm_network_watcher_flow_log resource tied to a Network Watcher
+        #   instance. Network Watcher deployment is scoped to Project 03.
+        #   Until then, flow-log enablement is enforced via Azure Policy at the
+        #   subscription level, not via this module.
+        run: |
+          checkov \
+            --directory . \
+            --framework terraform \
+            --compact \
+            --quiet \
+            --soft-fail \
+            --hard-fail-on HIGH,CRITICAL \
+            --skip-check CKV2_AZURE_31
+
+  # ── 4. Cost Estimate ───────────────────────────────────────────────────────────
+  cost:
+    name: Cost Estimate
+    # Infracost requires ARM credentials to generate accurate plan estimates.
+    # Skip on fork PRs where secrets aren't available; internal PRs will estimate costs.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/01-landing-zone
+    env:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: terraform init
+        run: terraform init
+
+      - name: terraform plan
+        run: terraform plan -out=tfplan -input=false
+
+      # Infracost generates cost estimates for cloud resources.
+      # See https://www.infracost.io/docs/
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v2
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate cost breakdown
+        run: infracost breakdown --path tfplan --format json > /tmp/infracost.json
+
+      - name: Post cost estimate
+        # Posts a comment on the PR with a formatted cost breakdown.
+        # Includes resource-by-resource cost delta vs the current infrastructure.
+        uses: infracost/actions/comment@v2
+        with:
+          path: /tmp/infracost.json
+          github-token: ${{ github.token }}

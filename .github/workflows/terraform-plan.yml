@@ -1,0 +1,69 @@
+name: Terraform Plan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "modules/**"
+      - "projects/**"
+      - ".github/workflows/terraform-*.yml"
+  workflow_dispatch:
+
+# Do NOT cancel in-progress plans — a truncated plan artifact is worse than a
+# delayed one. Operators should review whichever plan completes last.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan — Landing Zone
+    runs-on: ubuntu-latest
+
+    # Requires a "production" environment created in GitHub Settings → Environments.
+    # Add required reviewers there to prevent unreviewed plans from racing to apply.
+    environment: production
+
+    defaults:
+      run:
+        working-directory: projects/01-landing-zone
+
+    # ARM credentials come from GitHub secrets scoped to the production environment.
+    # Never hardcode — the provider reads these env vars automatically.
+    env:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform plan
+        run: terraform plan -out=tfplan -input=false
+
+      - name: Show plan
+        # Print the human-readable plan to CI logs so reviewers can assess impact
+        # without downloading the binary tfplan artifact.
+        run: terraform show -no-color tfplan
+
+      - name: Upload plan artifact
+        # always() ensures the artifact is uploaded even if the show step fails,
+        # so operators can inspect binary plan output for debugging.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.sha }}
+          path: projects/01-landing-zone/tfplan
+          # 7 days — long enough for a manual review + apply cycle before expiry.
+          retention-days: 7
