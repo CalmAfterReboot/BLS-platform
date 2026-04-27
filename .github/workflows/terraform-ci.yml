@@ -136,7 +136,7 @@ jobs:
       - name: Post cost estimate
         # Posts a comment on the PR with a formatted cost breakdown.
         # Includes resource-by-resource cost delta vs the current infrastructure.
-        uses: infracost/actions/comment@v2
+        uses: infracost/infracost-gh-comment@v1
         with:
           path: /tmp/infracost.json
           github-token: ${{ github.token }}
