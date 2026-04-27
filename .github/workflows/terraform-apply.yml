@@ -72,8 +72,12 @@ jobs:
 
       - name: Terraform Apply
         run: |
-          if [ -f tfplan ]; then
-            echo "Applying saved plan artifact..."
+          # Artifact is downloaded to the runner root, not the working directory.
+          # Find it and copy it into place before applying.
+          PLAN_FILE=$(find $GITHUB_WORKSPACE -name "tfplan" | head -1)
+          if [ -n "$PLAN_FILE" ]; then
+            echo "Found plan at $PLAN_FILE"
+            cp "$PLAN_FILE" tfplan
             terraform apply -auto-approve tfplan
           else
             echo "::error::No plan file found. Cannot apply."
