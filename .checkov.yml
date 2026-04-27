@@ -1,0 +1,12 @@
+framework:
+  - terraform
+
+compact: true
+quiet: true
+soft-fail: true
+hard-fail-on:
+  - HIGH
+  - CRITICAL
+
+skip-check:
+  - CKV2_AZURE_31

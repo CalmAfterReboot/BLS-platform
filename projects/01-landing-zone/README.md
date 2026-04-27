@@ -167,4 +167,5 @@ terraform force-unlock <lock-id>
 | Log Analytics (<5GB/day free tier) | £0 |
 | Azure Policy assignments | £0 |
 | Remote state (Blob Storage, LRS) | <£0.01 |
-| **Total** | **~£0** |
+| **Total** | **~£0** |# Pipeline test - Day 5
+
