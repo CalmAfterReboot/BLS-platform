@@ -8,6 +8,11 @@
   community.general.ufw:
     state: reloaded
 
+- name: apply sysctl settings
+  ansible.builtin.command:
+    cmd: sysctl --system
+  changed_when: false
+
 - name: reload systemd daemon
   ansible.builtin.systemd:
     daemon_reload: true

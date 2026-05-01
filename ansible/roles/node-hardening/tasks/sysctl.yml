@@ -1,9 +1,9 @@
 ---
-- name: Apply kernel hardening sysctl parameters
-  ansible.posix.sysctl:
-    name: "{{ item.key }}"
-    value: "{{ item.value | string }}"
-    state: present
-    sysctl_file: /etc/sysctl.d/99-bls-hardening.conf
-    reload: true
-  loop: "{{ sysctl_settings | dict2items }}"
+- name: Deploy sysctl kernel hardening configuration
+  ansible.builtin.template:
+    src: sysctl-hardening.conf.j2
+    dest: /etc/sysctl.d/99-bls-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: apply sysctl settings

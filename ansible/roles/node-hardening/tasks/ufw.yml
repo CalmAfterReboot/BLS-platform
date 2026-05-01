@@ -1,9 +1,4 @@
 ---
-- name: Reset UFW to defaults (idempotent — only fires on first run)
-  community.general.ufw:
-    state: reset
-  changed_when: false
-
 - name: Set UFW default input policy to deny
   community.general.ufw:
     default: deny
