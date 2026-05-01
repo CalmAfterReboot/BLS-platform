@@ -1,0 +1,29 @@
+---
+- name: Deploy chrony configuration (UK NTP pool)
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart chrony
+
+- name: Ensure chrony service is enabled and running
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true
+
+- name: Disable systemd-timesyncd (conflicts with chrony)
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Verify chrony is synchronised (read-only check)
+  ansible.builtin.command:
+    cmd: chronyc tracking
+  register: chrony_tracking
+  changed_when: false
+  failed_when: false

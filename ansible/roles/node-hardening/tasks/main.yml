@@ -1,0 +1,40 @@
+---
+- name: Assert target OS is Ubuntu 24.04
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version is version("24.04", ">=")
+    fail_msg: "This role requires Ubuntu 24.04 or later"
+  tags: [always]
+
+- name: Include package management tasks
+  ansible.builtin.import_tasks: packages.yml
+  tags: [packages]
+
+- name: Include SSH hardening tasks
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [ssh]
+
+- name: Include UFW firewall tasks
+  ansible.builtin.import_tasks: ufw.yml
+  tags: [ufw, firewall]
+
+- name: Include sysctl kernel hardening tasks
+  ansible.builtin.import_tasks: sysctl.yml
+  tags: [sysctl, kernel]
+
+- name: Include resource limits tasks
+  ansible.builtin.import_tasks: limits.yml
+  tags: [limits]
+
+- name: Include fail2ban tasks
+  ansible.builtin.import_tasks: fail2ban.yml
+  tags: [fail2ban]
+
+- name: Include auditd tasks
+  ansible.builtin.import_tasks: auditd.yml
+  tags: [auditd]
+
+- name: Include NTP/chrony tasks
+  ansible.builtin.import_tasks: ntp.yml
+  tags: [ntp, chrony]

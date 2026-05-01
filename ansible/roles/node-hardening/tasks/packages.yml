@@ -1,0 +1,23 @@
+---
+- name: Update apt cache if older than 1 hour
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Remove insecure legacy packages
+  ansible.builtin.apt:
+    name: "{{ packages_remove }}"
+    state: absent
+    purge: true
+
+- name: Install hardening packages
+  ansible.builtin.apt:
+    name: "{{ packages_install }}"
+    state: present
+
+- name: Enable unattended security upgrades via debconf
+  ansible.builtin.debconf:
+    name: unattended-upgrades
+    question: unattended-upgrades/enable_auto_updates
+    value: "true"
+    vtype: boolean

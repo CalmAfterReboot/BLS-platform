@@ -1,0 +1,5 @@
+---
+# Role-internal constants — not intended to be overridden
+sshd_config_path: /etc/ssh/sshd_config
+ufw_rules_applied_marker: /etc/ufw/.ansible_applied
+auditd_rules_dir: /etc/audit/rules.d

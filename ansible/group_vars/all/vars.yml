@@ -1,0 +1,93 @@
+---
+# SSH hardening
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_pubkey_authentication: "yes"
+ssh_allow_users: "dev"
+ssh_max_auth_tries: 3
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+ssh_login_grace_time: 30
+
+# UFW
+ufw_default_input_policy: deny
+ufw_default_output_policy: allow
+ufw_default_forward_policy: deny
+ufw_allowed_ports:
+  - { port: "{{ ssh_port }}", proto: tcp, comment: SSH }
+
+# Sysctl hardening
+sysctl_settings:
+  net.ipv4.tcp_syncookies: 1
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.default.accept_source_route: 0
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.secure_redirects: 0
+  net.ipv4.conf.all.log_martians: 1
+  net.ipv4.conf.default.log_martians: 1
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+  net.ipv4.icmp_ignore_bogus_error_responses: 1
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+  net.ipv6.conf.all.accept_ra: 0
+  net.ipv6.conf.default.accept_ra: 0
+  kernel.randomize_va_space: 2
+  kernel.sysrq: 0
+  fs.protected_hardlinks: 1
+  fs.protected_symlinks: 1
+
+# Resource limits
+limits_settings:
+  - domain: "*"
+    limit_type: soft
+    limit_item: nofile
+    value: 65536
+  - domain: "*"
+    limit_type: hard
+    limit_item: nofile
+    value: 65536
+  - domain: "*"
+    limit_type: soft
+    limit_item: nproc
+    value: 4096
+  - domain: "*"
+    limit_type: hard
+    limit_item: nproc
+    value: 4096
+
+# fail2ban
+fail2ban_bantime: 3600
+fail2ban_findtime: 600
+fail2ban_maxretry: 5
+fail2ban_ignoreip: "127.0.0.1/8 ::1"
+
+# NTP (UK pool)
+ntp_servers:
+  - 0.uk.pool.ntp.org
+  - 1.uk.pool.ntp.org
+  - 2.uk.pool.ntp.org
+  - 3.uk.pool.ntp.org
+
+# Packages
+packages_install:
+  - ufw
+  - fail2ban
+  - chrony
+  - auditd
+  - audispd-plugins
+  - libpam-pwquality
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - unattended-upgrades
+  - logrotate
+
+packages_remove:
+  - telnet
+  - rsh-client
+  - rsh-redone-client
+  - nis
+  - talk
+  - talkd

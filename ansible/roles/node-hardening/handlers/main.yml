@@ -1,0 +1,28 @@
+---
+- name: restart sshd
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+
+- name: reload ufw
+  community.general.ufw:
+    state: reloaded
+
+- name: reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: restart fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted
+
+- name: restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+
+- name: restart chrony
+  ansible.builtin.service:
+    name: chrony
+    state: restarted

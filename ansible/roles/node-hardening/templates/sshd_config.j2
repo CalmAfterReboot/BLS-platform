@@ -1,0 +1,50 @@
+# Managed by Ansible — do not edit manually
+# Role: node-hardening | Template: sshd_config.j2
+
+# Network
+Port {{ ssh_port }}
+AddressFamily inet
+ListenAddress 0.0.0.0
+
+# Authentication
+PermitRootLogin {{ ssh_permit_root_login }}
+PasswordAuthentication {{ ssh_password_authentication }}
+PubkeyAuthentication {{ ssh_pubkey_authentication }}
+AuthorizedKeysFile .ssh/authorized_keys
+ChallengeResponseAuthentication no
+KerberosAuthentication no
+GSSAPIAuthentication no
+UsePAM yes
+
+# Access control
+AllowUsers {{ ssh_allow_users }}
+MaxAuthTries {{ ssh_max_auth_tries }}
+MaxSessions 10
+LoginGraceTime {{ ssh_login_grace_time }}
+
+# Algorithms — modern only (OpenSSH 9.x on Ubuntu 24.04)
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+HostKeyAlgorithms ssh-ed25519,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256
+
+# Session
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+TCPKeepAlive no
+
+# Forwarding — disabled
+X11Forwarding no
+AllowTcpForwarding no
+AllowAgentForwarding no
+PermitTunnel no
+
+# Logging
+SyslogFacility AUTH
+LogLevel VERBOSE
+
+# Misc
+PrintLastLog yes
+Banner none
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server

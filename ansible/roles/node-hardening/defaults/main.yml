@@ -1,0 +1,6 @@
+---
+# Overridable defaults — values here can be overridden by group_vars/host_vars
+ssh_port: 22
+fail2ban_bantime: 3600
+fail2ban_findtime: 600
+fail2ban_maxretry: 5
