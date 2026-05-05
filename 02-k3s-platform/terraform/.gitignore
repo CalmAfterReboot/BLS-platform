@@ -1,0 +1,19 @@
+# Terraform state — never commit
+*.tfstate
+*.tfstate.backup
+
+# Terraform working directory
+.terraform/
+.terraform.lock.hcl
+
+# Plan files may contain secrets
+tfplan
+*.tfplan
+
+# Sensitive variable files
+terraform.tfvars
+*.auto.tfvars
+*secrets*.tfvars
+
+# Local backend override (used when Azure backend is not yet provisioned)
+backend_override.tf

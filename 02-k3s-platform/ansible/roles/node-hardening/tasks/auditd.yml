@@ -1,0 +1,49 @@
+---
+- name: Install auditd
+  ansible.builtin.apt:
+    name: auditd
+    state: present
+
+- name: Ensure auditd rules directory exists
+  ansible.builtin.file:
+    path: "{{ auditd_rules_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Deploy auditd hardening rules
+  ansible.builtin.copy:
+    dest: "{{ auditd_rules_dir }}/99-bls-hardening.rules"
+    owner: root
+    group: root
+    mode: "0640"
+    content: |
+      # BLS hardening audit rules
+      -a always,exit -F arch=b64 -S setuid -S setgid -F exit=0 -k privilege_escalation
+      -a always,exit -F arch=b64 -S setresuid -S setresgid -F exit=0 -k privilege_escalation
+      -w /etc/passwd -p wa -k identity
+      -w /etc/group -p wa -k identity
+      -w /etc/shadow -p rwa -k identity
+      -w /etc/sudoers -p rwa -k sudoers
+      -w /etc/sudoers.d/ -p rwa -k sudoers
+      -w /etc/ssh/sshd_config -p wa -k sshd_config
+      -w /etc/cron.d/ -p wa -k cron
+      -w /etc/crontab -p wa -k cron
+      -w /var/spool/cron/ -p wa -k cron
+      -w /var/log/faillog -p wa -k logins
+      -w /var/log/lastlog -p wa -k logins
+      -e 2
+  notify: restart auditd
+
+- name: Ensure auditd service is enabled and running
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+
+- name: Load new auditd rules without reboot (best-effort)
+  ansible.builtin.command:
+    cmd: augenrules --load
+  changed_when: false
+  failed_when: false

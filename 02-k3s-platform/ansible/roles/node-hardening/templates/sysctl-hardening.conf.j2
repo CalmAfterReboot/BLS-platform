@@ -1,0 +1,5 @@
+# Managed by Ansible — do not edit manually
+# Role: node-hardening | Template: sysctl-hardening.conf.j2
+{% for key, value in sysctl_settings.items() %}
+{{ key }} = {{ value }}
+{% endfor %}

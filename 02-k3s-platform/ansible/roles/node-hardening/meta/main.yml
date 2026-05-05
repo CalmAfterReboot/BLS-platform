@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: node_hardening
+  author: BLS DevOps
+  description: Ubuntu 24.04 security baseline hardening
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+
+dependencies: []

@@ -1,0 +1,22 @@
+---
+- name: Deploy fail2ban jail.local configuration
+  ansible.builtin.template:
+    src: fail2ban-jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart fail2ban
+
+- name: Ensure fail2ban service is enabled and running
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true
+
+- name: Verify fail2ban is active (read-only check)
+  ansible.builtin.command:
+    cmd: fail2ban-client status
+  register: fail2ban_status
+  changed_when: false
+  failed_when: fail2ban_status.rc != 0

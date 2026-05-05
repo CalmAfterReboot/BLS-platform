@@ -1,0 +1,21 @@
+---
+- name: Configure system resource limits in /etc/security/limits.d/
+  community.general.pam_limits:
+    domain: "{{ item.domain }}"
+    limit_type: "{{ item.limit_type }}"
+    limit_item: "{{ item.limit_item }}"
+    value: "{{ item.value }}"
+    dest: /etc/security/limits.d/99-bls-hardening.conf
+  loop: "{{ limits_settings }}"
+
+- name: Ensure pam_limits is active in common-session
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session
+    line: "session required pam_limits.so"
+    state: present
+
+- name: Ensure pam_limits is active in common-session-noninteractive
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session-noninteractive
+    line: "session required pam_limits.so"
+    state: present

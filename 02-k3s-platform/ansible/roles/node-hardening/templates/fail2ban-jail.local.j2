@@ -1,0 +1,19 @@
+# Managed by Ansible — do not edit manually
+# Role: node-hardening | Template: fail2ban-jail.local.j2
+
+[DEFAULT]
+ignoreip    = {{ fail2ban_ignoreip }}
+bantime     = {{ fail2ban_bantime }}
+findtime    = {{ fail2ban_findtime }}
+maxretry    = {{ fail2ban_maxretry }}
+backend     = systemd
+banaction   = ufw
+logtarget   = /var/log/fail2ban.log
+
+[sshd]
+enabled  = true
+port     = {{ ssh_port }}
+filter   = sshd
+logpath  = %(sshd_log)s
+maxretry = {{ fail2ban_maxretry }}
+bantime  = {{ fail2ban_bantime }}

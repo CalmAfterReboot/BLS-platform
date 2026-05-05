@@ -1,0 +1,27 @@
+# Managed by Ansible — do not edit manually
+# Role: node-hardening | Template: chrony.conf.j2
+
+# UK NTP pool servers
+{% for server in ntp_servers %}
+pool {{ server }} iburst maxsources 4
+{% endfor %}
+
+# Use the system's local clock as a fallback
+local stratum 10
+
+# Record the rate at which the system clock gains/loses time
+driftfile /var/lib/chrony/chrony.drift
+
+# Allow the system clock to be stepped in the first 3 updates
+makestep 1.0 3
+
+# Enable kernel synchronisation of the real-time clock (RTC)
+rtcsync
+
+# Log tracking, measurements and statistics
+logdir /var/log/chrony
+log tracking measurements statistics
+
+# Security — only allow localhost to query
+allow 127.0.0.1
+deny all
