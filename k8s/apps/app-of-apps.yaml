@@ -5,14 +5,17 @@ metadata:
   namespace: argocd
 spec:
   generators:
-  - git:
-      repoURL: https://github.com/CalmAfterReboot/BLS-platform
-      revision: HEAD
-      directories:
-      - path: k8s/workloads/*
+  - matrix:
+      generators:
+      - git:
+          repoURL: https://github.com/CalmAfterReboot/BLS-platform
+          revision: HEAD
+          directories:
+          - path: k8s/workloads/*
+      - clusters: {}
   template:
     metadata:
-      name: '{{path.basename}}'
+      name: '{{path.basename}}-{{name}}'
     spec:
       project: default
       source:
@@ -20,7 +23,7 @@ spec:
         targetRevision: HEAD
         path: '{{path}}'
       destination:
-        server: https://kubernetes.default.svc
+        server: '{{server}}'
         namespace: '{{path.basename}}'
       syncPolicy:
         automated:
