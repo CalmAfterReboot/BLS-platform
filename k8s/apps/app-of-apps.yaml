@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: bls-workloads
+  namespace: argocd
+spec:
+  generators:
+  - git:
+      repoURL: https://github.com/CalmAfterReboot/homelab-infrastructure
+      revision: HEAD
+      directories:
+      - path: k8s/workloads/*
+  template:
+    metadata:
+      name: '{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/CalmAfterReboot/homelab-infrastructure
+        targetRevision: HEAD
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
