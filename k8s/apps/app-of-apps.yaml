@@ -6,7 +6,7 @@ metadata:
 spec:
   generators:
   - git:
-      repoURL: https://github.com/CalmAfterReboot/homelab-infrastructure
+      repoURL: https://github.com/CalmAfterReboot/BLS-platform
       revision: HEAD
       directories:
       - path: k8s/workloads/*
@@ -16,7 +16,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/CalmAfterReboot/homelab-infrastructure
+        repoURL: https://github.com/CalmAfterReboot/BLS-platform
         targetRevision: HEAD
         path: '{{path}}'
       destination:
