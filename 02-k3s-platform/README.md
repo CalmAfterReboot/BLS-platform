@@ -2,7 +2,7 @@
 
 **Blue Layer Systems DevOps Portfolio · Project 2 of N**
 
-An end-to-end, infrastructure-as-code provisioned Kubernetes HA cluster running on a Proxmox homelab. Five Ubuntu 24.04 nodes — three control plane, two worker — provisioned via Terraform in 42 seconds, security-hardened via Ansible, and ready for k3s installation.
+An end-to-end, infrastructure-as-code provisioned Kubernetes HA cluster running on a Proxmox homelab. Five Ubuntu 24.04 nodes — three control plane, two worker — provisioned via Terraform in 42 seconds, security-hardened via Ansible, with the k3s HA cluster installed and all five nodes confirmed Ready.
 
 ---
 
@@ -19,7 +19,7 @@ An end-to-end, infrastructure-as-code provisioned Kubernetes HA cluster running 
 9. [Security Hardening Reference](#security-hardening-reference)
 10. [Troubleshooting Log](#troubleshooting-log)
 11. [Current Status](#current-status)
-12. [Next Steps — k3s Installation](#next-steps--k3s-installation)
+12. [Next Steps — ArgoCD Installation](#next-steps--argocd-installation)
 13. [ADR-004](#adr-004)
 
 ---
@@ -98,6 +98,9 @@ Control   Workers
 
 ```
 02-k3s-platform/
+├── docs/
+│   └── adr/
+│       └── ADR-004-proxmox-provisioning-approach.md
 ├── terraform/
 │   ├── versions.tf          # Terraform >= 1.9.0, bpg/proxmox 0.66.3, azurerm backend
 │   ├── provider.tf          # bpg/proxmox provider (endpoint, token, SSH)
@@ -578,7 +581,7 @@ UK NTP pool (`0-3.uk.pool.ntp.org`), `makestep 1.0 3` to handle large initial cl
 
 ## Troubleshooting Log
 
-Issues encountered during Phase 4 and their resolutions. Documented for reproducibility and as reference for future cluster builds.
+Issues encountered during Phase 4 (node hardening) and Phase 5 (k3s cluster installation) and their resolutions. Documented for reproducibility and as reference for future cluster builds.
 
 ---
 
@@ -711,6 +714,143 @@ pfctl -F nat
 
 ---
 
+### Issue 6 — Accidental Self-Join on control-01
+
+**Phase:** k3s cluster installation
+
+**Symptom:** k3s failed immediately with:
+
+```
+listen tcp 192.168.200.11:2380: bind: cannot assign requested address
+```
+
+**Cause:** The control-02 join command was run on the wrong node — executed on control-01 while the shell prompt still showed control-01's hostname. The join command partially wrote control-02's IP (`192.168.200.11`) into control-01's etcd member configuration before failing, leaving etcd in a corrupted intermediate state.
+
+**Fix:** There is no safe partial fix for corrupted etcd member config. Required a full reinstall:
+
+```bash
+# On control-01 — full wipe
+/usr/local/bin/k3s-uninstall.sh
+rm -rf /var/lib/rancher/k3s
+
+# Recreate the kube-vip static pod manifest
+# (see Issue 7 for the no-Docker manifest method)
+
+# Re-bootstrap the cluster from scratch
+curl -sfL https://get.k3s.io | sh -s - server \
+  --cluster-init \
+  --tls-san 192.168.200.5 \
+  --tls-san 192.168.200.10 \
+  --disable traefik \
+  --node-ip 192.168.200.10
+```
+
+**Lesson:** Always verify the shell prompt hostname before running a join command. Double-check with `hostname` or `cat /etc/hostname`. etcd member config corruption requires a full `k3s-uninstall.sh` + data wipe — there is no `etcdctl` incantation that reliably recovers a node that partially joined with the wrong IP.
+
+---
+
+### Issue 7 — kube-vip Manifest Generation Without Docker
+
+**Phase:** k3s cluster installation
+
+**Symptom:** The standard kube-vip quickstart uses a Docker container to generate the static pod manifest:
+
+```bash
+docker run --rm ghcr.io/kube-vip/kube-vip:latest manifest pod ...
+```
+
+Running this on a hardened k3s node returned `docker: command not found`.
+
+**Cause:** The hardened nodes have no container runtime prior to k3s installation. Docker is not installed and was not planned for — containerd is the k3s runtime and is not available on the PATH for direct use before k3s is running.
+
+**Fix:** Write the static pod manifest directly using a heredoc — no runtime required:
+
+```bash
+# On control-01, before bootstrapping k3s
+mkdir -p /var/lib/rancher/k3s/agent/pod-manifests
+
+cat <<EOF > /var/lib/rancher/k3s/agent/pod-manifests/kube-vip.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-vip
+  namespace: kube-system
+spec:
+  containers:
+  - name: kube-vip
+    image: ghcr.io/kube-vip/kube-vip:latest
+    imagePullPolicy: Always
+    args:
+    - manager
+    env:
+    - name: vip_arp
+      value: "true"
+    - name: port
+      value: "6443"
+    - name: vip_interface
+      value: eth0
+    - name: vip_cidr
+      value: "32"
+    - name: cp_enable
+      value: "true"
+    - name: cp_namespace
+      value: kube-system
+    - name: vip_ddns
+      value: "false"
+    - name: svc_enable
+      value: "false"
+    - name: vip_leaderelection
+      value: "true"
+    - name: vip_leaseduration
+      value: "5"
+    - name: vip_renewdeadline
+      value: "3"
+    - name: vip_retryperiod
+      value: "1"
+    - name: address
+      value: 192.168.200.5
+    securityContext:
+      capabilities:
+        add:
+        - NET_ADMIN
+        - NET_RAW
+    volumeMounts:
+    - mountPath: /etc/kubernetes/admin.conf
+      name: kubeconfig
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    ip: 127.0.0.1
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /etc/rancher/k3s/k3s.yaml
+    name: kubeconfig
+EOF
+```
+
+**Lesson:** Always document the no-Docker manifest path for environments where container tooling is not pre-installed. The Docker-based generation command from the kube-vip quickstart assumes a workstation environment, not a hardened server node. For production and hardened builds, write the manifest directly or generate it on a separate workstation and copy it into place.
+
+---
+
+### Issue 8 — kube-vip ARP Not Propagating (VIP Unreachable from Other Nodes)
+
+**Phase:** k3s cluster installation
+
+**Symptom:** After bootstrapping control-01 with kube-vip, pinging the VIP (`192.168.200.5`) from control-02 returned `Destination Host Unreachable`. The kube-vip pod showed as `Running`, and `ip addr` on control-01 showed the VIP bound:
+
+```
+inet 192.168.200.5/32 scope global eth0
+```
+
+**Root cause:** The VIP binding was a remnant of the accidental self-join incident (Issue 6). After the corrupted bootstrap, k3s entered a crash loop — kube-vip was running as a static pod but k3s itself was not functional. kube-vip bound the VIP address to the interface correctly, but because k3s was crash-looping, kube-vip was also cycling and had not completed a stable ARP announcement to the layer-2 segment before it was taken down again. Other nodes never received a valid ARP entry mapping the VIP to control-01's MAC address.
+
+**Fix:** Resolved as part of the full reinstall for Issue 6. After a clean bootstrap, kube-vip stabilised immediately and the VIP was reachable from all nodes within seconds of the pod reaching `Running`.
+
+**Lesson:** A VIP bound on the interface (`ip addr` shows `inet 192.168.200.5/32`) does **not** guarantee kube-vip is functional. The ARP announcement only propagates reliably when kube-vip has been stable for several seconds. Always verify with a ping from a second node immediately after the bootstrap completes — before proceeding to join additional control planes. If the VIP is not reachable from the second node, do not continue the join sequence.
+
+---
+
 ## Current Status
 
 - [x] Cloud-init template created (VM ID 9000, Ubuntu 24.04)
@@ -718,83 +858,89 @@ pfctl -F nat
 - [x] Terraform state stored in Azure Storage backend
 - [x] Ansible inventory auto-generated from Terraform outputs
 - [x] Node hardening complete — `ok=34, failed=0` across all 5 nodes
-- [ ] k3s HA cluster installation
-- [ ] `kubectl get nodes` — all 5 Ready
+- [x] k3s HA cluster installation
+- [x] `kubectl get nodes` — all 5 Ready
 - [ ] ADR-004 written
 
 ---
 
-## Next Steps — k3s Installation
+## Next Steps — ArgoCD Installation
 
-### Bootstrap First Control Plane
+With the k3s HA cluster running and all five nodes Ready, the next phase is deploying ArgoCD as the GitOps controller for the platform.
 
-```bash
-# On k3s-control-01
-curl -sfL https://get.k3s.io | sh -s - server \
-  --cluster-init \
-  --tls-san 192.168.200.10 \
-  --disable traefik \
-  --node-ip 192.168.200.10
-
-# Retrieve the cluster join token
-sudo cat /var/lib/rancher/k3s/server/token
-```
-
-### Join Control Planes 02 and 03
-
-Join **sequentially** — not in parallel. Each node must confirm etcd membership before the next one joins to avoid split-brain during initial cluster formation.
+### Prerequisites
 
 ```bash
-# On k3s-control-02 — wait for this to reach Ready before proceeding to 03
-curl -sfL https://get.k3s.io | sh -s - server \
-  --server https://192.168.200.10:6443 \
-  --token <TOKEN_FROM_CONTROL_01> \
-  --node-ip 192.168.200.11
-
-# On k3s-control-03
-curl -sfL https://get.k3s.io | sh -s - server \
-  --server https://192.168.200.10:6443 \
-  --token <TOKEN_FROM_CONTROL_01> \
-  --node-ip 192.168.200.12
-```
-
-### Join Worker Nodes
-
-```bash
-# On k3s-worker-01
-curl -sfL https://get.k3s.io | sh -s - agent \
-  --server https://192.168.200.10:6443 \
-  --token <TOKEN_FROM_CONTROL_01> \
-  --node-ip 192.168.200.20
-
-# On k3s-worker-02
-curl -sfL https://get.k3s.io | sh -s - agent \
-  --server https://192.168.200.10:6443 \
-  --token <TOKEN_FROM_CONTROL_01> \
-  --node-ip 192.168.200.21
-```
-
-### Pull Kubeconfig to Management Machine
-
-```bash
-scp ansible@192.168.200.10:/etc/rancher/k3s/k3s.yaml ~/.kube/config
-sed -i 's/127.0.0.1/192.168.200.10/g' ~/.kube/config
-chmod 600 ~/.kube/config
-```
-
-### Verify
-
-```bash
+# Confirm all nodes are Ready before proceeding
 kubectl get nodes -o wide
-# Expected: all 5 nodes STATUS=Ready, ROLES correctly showing control-plane and <none>
+
+# Confirm the VIP is reachable and the API server responds
+kubectl cluster-info
 ```
+
+### Install ArgoCD
+
+```bash
+# Create the argocd namespace
+kubectl create namespace argocd
+
+# Apply the stable ArgoCD manifests
+kubectl apply -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Wait for all ArgoCD pods to reach Running
+kubectl wait --for=condition=Ready pod --all -n argocd --timeout=300s
+
+# Verify
+kubectl get pods -n argocd
+```
+
+### Retrieve Initial Admin Password
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d; echo
+```
+
+### Access the UI (port-forward — before Ingress is configured)
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# UI available at https://localhost:8080
+# Username: admin  |  Password: from step above
+```
+
+### Login via CLI
+
+```bash
+argocd login localhost:8080 \
+  --username admin \
+  --password <INITIAL_PASSWORD> \
+  --insecure
+
+# Update the admin password
+argocd account update-password
+```
+
+### Connect a Git Repository
+
+```bash
+argocd repo add <REPO_URL> \
+  --ssh-private-key-path ~/.ssh/bls_ansible_ed25519
+```
+
+### Next Phase
+
+- Configure an Ingress or LoadBalancer for the ArgoCD UI
+- Bootstrap an app-of-apps Application pointing at this repository
+- Deploy platform components (cert-manager, ingress-nginx, monitoring stack) via ArgoCD
 
 ---
 
 ## ADR-004
 
-**Status:** Pending — to be written next session.
+**Status:** Pending — see [docs/adr/ADR-004-proxmox-provisioning-approach.md](docs/adr/ADR-004-proxmox-provisioning-approach.md)
 
 **Topic:** Terraform + Ansible for Proxmox VM provisioning vs manual VM creation.
 
-**Decision preview:** Terraform (`bpg/proxmox`) owns VM lifecycle — create, destroy, resize. Ansible owns post-provision configuration — hardening, package state, service management. Cloud-init is scoped to bootstrap only: first user, static IP. Manual VM creation was rejected as it cannot be reproduced, version-controlled, diffed in review, or reliably destroyed and rebuilt.
+**Decision:** Terraform (`bpg/proxmox`) owns VM lifecycle — create, destroy, resize. Ansible owns post-provision configuration — hardening, package state, service management. Cloud-init is scoped to bootstrap only: first user, static IP. Manual VM creation was rejected as it cannot be reproduced, version-controlled, diffed in review, or reliably destroyed and rebuilt.
