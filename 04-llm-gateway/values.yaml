@@ -1,0 +1,26 @@
+replicaCount: 1
+
+image:
+  repository: llm-gateway
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+redis:
+  enabled: true
+  host: redis
+  port: 6379
+
+ollama:
+  endpoint: http://10.212.46.5:11434
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
