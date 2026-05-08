@@ -1,0 +1,50 @@
+namespace: llm-gateway
+
+gateway:
+  image: ghcr.io/calmafterreboot/bls-llm-gateway:latest
+  replicas: 1
+  port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+litellm:
+  image: ghcr.io/berriai/litellm:main-latest
+  replicas: 1
+  port: 4000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+redis:
+  image: redis:7-alpine
+  replicas: 1
+  port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+ingress:
+  enabled: true
+  className: traefik
+  host: llm-gateway.local
+  tls: false
+
+proxmox:
+  ollamaEndpoint: "http://10.212.46.5:11434"
+
+secrets:
+  litellmMasterKey: ""
+  apiKeys: ""
