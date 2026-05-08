@@ -27,6 +27,8 @@ data:
       request_timeout: 120
     general_settings:
       master_key: ${LITELLM_MASTER_KEY}
+      disable_spend_logs: true
+      disable_reset_budget: true
     cache:
       type: redis
       host: redis-service
