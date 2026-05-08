@@ -21,12 +21,6 @@ spec:
           command: ["litellm", "--config", "/etc/litellm/config.yaml", "--port", "4000"]
           ports:
             - containerPort: 4000
-          env:
-            - name: LITELLM_MASTER_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-gateway-secrets
-                  key: litellm-master-key
           volumeMounts:
             - name: litellm-config
               mountPath: /etc/litellm
