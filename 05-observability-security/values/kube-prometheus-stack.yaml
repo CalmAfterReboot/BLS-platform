@@ -16,7 +16,10 @@ prometheus:
     replicas: 1
     retention: 7d
     retentionSize: "5GB"
-    # Watch ServiceMonitors across all namespaces — required for llm-gateway scraping
+    # Watch ServiceMonitors across all namespaces — required for llm-gateway scraping.
+    # serviceMonitorSelectorNilUsesHelmValues must be false or Prometheus ignores the
+    # empty selector and defaults to matchLabels: release: kube-prometheus-stack.
+    serviceMonitorSelectorNilUsesHelmValues: false
     serviceMonitorSelector: {}
     serviceMonitorNamespaceSelector: {}
     podMonitorSelector: {}

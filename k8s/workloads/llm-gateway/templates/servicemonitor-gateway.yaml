@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Values.namespace }}
   labels:
     app: llm-gateway
+    release: kube-prometheus-stack
 spec:
   selector:
     matchLabels:
