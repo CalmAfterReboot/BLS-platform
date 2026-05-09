@@ -20,3 +20,4 @@ Thumbs.db
 # Local session state — never commit
 BLS-STATUS.md
 EOFBLS-STATUS.md
+.claude/local-context.md
