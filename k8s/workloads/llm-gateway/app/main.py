@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from routers import completions
 from middleware.auth import APIKeyMiddleware
 import logging
@@ -12,6 +13,8 @@ app = FastAPI(
     description="Multi-provider LLM routing via LiteLLM",
     version="0.1.0",
 )
+
+Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,

@@ -3,10 +3,13 @@ kind: Service
 metadata:
   name: llm-gateway-service
   namespace: {{ .Values.namespace }}
+  labels:
+    app: llm-gateway
 spec:
   selector:
     app: llm-gateway
   ports:
-    - port: 8000
+    - name: http
+      port: 8000
       targetPort: 8000
   type: ClusterIP
