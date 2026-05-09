@@ -1,7 +1,7 @@
 # ADR-003: Ansible over Cloud-Init for Node Configuration
 
-**Status:** Accepted  
-**Date:** 2026-05-01  
+**Status:** Accepted
+**Date:** 2026-05-01
 **Author:** BLS DevOps
 
 ---

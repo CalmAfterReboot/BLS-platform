@@ -1,0 +1,37 @@
+# Standalone ArgoCD Application — NOT managed by the matrix ApplicationSet.
+# The ApplicationSet (app-of-apps.yaml) only handles local Helm charts under
+# k8s/workloads/. kube-prometheus-stack is an upstream chart that requires
+# multi-source: one source for the chart registry, one for the values file.
+# Requires ArgoCD >= 2.6 for multi-source Application support.
+#
+# ServerSideApply=true is required: kube-prometheus-stack CRD annotations
+# exceed the 262144-byte limit enforced by client-side apply (kubectl apply).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: "84.5.0"
+      helm:
+        valueFiles:
+          - $values/05-observability-security/values/kube-prometheus-stack.yaml
+    - repoURL: https://github.com/CalmAfterReboot/BLS-platform
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
