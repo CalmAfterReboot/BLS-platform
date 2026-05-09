@@ -6,7 +6,7 @@ VALID_KEYS = set(os.getenv("BLS_API_KEYS", "").split(","))
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if request.url.path in ["/healthz", "/docs", "/openapi.json"]:
+        if request.url.path in ["/healthz", "/metrics", "/docs", "/openapi.json"]:
             return await call_next(request)
         auth = request.headers.get("Authorization", "")
         if not auth.startswith("Bearer "):
