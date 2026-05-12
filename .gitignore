@@ -21,3 +21,6 @@ Thumbs.db
 BLS-STATUS.md
 EOFBLS-STATUS.md
 .claude/local-context.md
+
+# Sealed-secrets controller key backups (never commit)
+bls-sealed-secrets-master*
