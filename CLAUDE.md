@@ -1,6 +1,6 @@
 # BLS-DevOps — Claude Code Context
 
-> Auto-loaded every session. Full playbook: docs/playbook/platform-engineering-playbook.md
+> Auto-loaded every session. Operator profile: docs/playbook/about-me.md
 
 ## Portfolio State
 
