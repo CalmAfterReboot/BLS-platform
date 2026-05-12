@@ -43,11 +43,7 @@ chmod 600 "$OUT"
 
 ### 3. Move off the workstation
 
-The exported file must end up in **encrypted off-workstation storage** before the runbook step is closed. Acceptable destinations:
-
-- A password manager with end-to-end encryption — store as a secure note or attachment.
-- An encrypted USB drive (LUKS, VeraCrypt, or platform-equivalent).
-- An encrypted cloud-backup target with key material the workstation does not hold.
+The exported file must end up in **encrypted off-workstation storage** before the runbook step is closed. The recommended destination type is a password manager with end-to-end encryption; other encrypted off-workstation storage is acceptable if the encryption key is not held on the workstation itself.
 
 Not acceptable: any Git repository (public or private), any unencrypted cloud sync folder, any "I'll clean it up later" temporary location.
 
