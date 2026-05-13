@@ -27,3 +27,6 @@ bls-sealed-secrets-master*
 
 # WU-2 sprint artefacts (timestamped cluster state dumps)
 scripts/wu-2/artefacts/
+
+# Phase sprint handoff docs (session continuity, never commit)
+PHASE-*-HANDOFF.md
