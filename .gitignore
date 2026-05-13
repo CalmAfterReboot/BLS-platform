@@ -24,3 +24,6 @@ EOFBLS-STATUS.md
 
 # Sealed-secrets controller key backups (never commit)
 bls-sealed-secrets-master*
+
+# WU-2 sprint artefacts (timestamped cluster state dumps)
+scripts/wu-2/artefacts/
