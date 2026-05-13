@@ -77,40 +77,49 @@ kubectl get all,cm,secret,ingress -n "${NS_WORKLOAD}" -o yaml \
   > "${ARTEFACT_DIR}/workload-before.yaml"
 green "  ✓ Snapshots written to ${ARTEFACT_DIR}"
 
-# ─── Phase 2: suspend selfHeal on the survivor ─────────────────
-blue "[2/6] Suspend automated sync on ${APP_MATRIX}"
-ORIG_AUTOMATED="$(kubectl get application -n "${NS_ARGOCD}" "${APP_MATRIX}" \
-  -o jsonpath='{.spec.syncPolicy.automated}' || true)"
-echo "${ORIG_AUTOMATED}" > "${ARTEFACT_DIR}/matrix-automated-original.json"
-
-if [[ -n "${ORIG_AUTOMATED}" && "${ORIG_AUTOMATED}" != "null" ]]; then
-  confirm "About to set ${APP_MATRIX}.spec.syncPolicy.automated=null. Original saved."
-  kubectl patch application -n "${NS_ARGOCD}" "${APP_MATRIX}" \
-    --type=merge -p '{"spec":{"syncPolicy":{"automated":null}}}'
-  green "  ✓ Automated sync suspended"
-else
-  yellow "  ! Already null — skipping"
-fi
-
-# ─── Phase 3: strip finalizer on the doomed Application ────────
-blue "[3/6] Strip resources-finalizer on ${APP_STANDALONE}"
+# ─── Phase 2: strip finalizer (non-destructive, no race) ───────
+# Reversible, triggers no reconcile, closes the cascade-prune risk
+# before the survivor is suspended. No confirm gate.
+blue "[2/6] Strip resources-finalizer on ${APP_STANDALONE}"
 FINALIZERS="$(kubectl get application -n "${NS_ARGOCD}" "${APP_STANDALONE}" \
   -o jsonpath='{.metadata.finalizers}' 2>/dev/null || echo '[]')"
 echo "${FINALIZERS}" > "${ARTEFACT_DIR}/standalone-finalizers-original.json"
 
 if [[ "${FINALIZERS}" == *"resources-finalizer.argocd.argoproj.io"* ]]; then
-  confirm "About to strip finalizers from ${APP_STANDALONE}. This prevents cascade-prune on delete."
   kubectl patch application -n "${NS_ARGOCD}" "${APP_STANDALONE}" \
     --type=merge -p '{"metadata":{"finalizers":null}}'
-  green "  ✓ Finalizer stripped"
+  green "  ✓ Finalizer stripped (cascade-prune risk closed)"
 else
   yellow "  ! No finalizer present — skipping"
 fi
 
-# ─── Phase 4: delete the standalone Application ────────────────
-blue "[4/6] Delete ${APP_STANDALONE} Application CR"
-confirm "About to DELETE Application ${APP_STANDALONE} with --cascade=orphan. Workload should survive."
+# ─── Phase 3-4: atomic suspend+delete block ────────────────────
+# Suspending the survivor opens a window where the doomed standalone can
+# reconcile freely with selfHeal=true. The delete must follow within seconds.
+# Single confirm gate up front — once past, the two operations run back-to-back.
+blue "[3/6] Atomic block: suspend survivor, delete standalone"
 
+# Capture survivor's original sync policy BEFORE the confirm — non-destructive
+# read; needed by Phase 5 restore even if the operator aborts here.
+ORIG_AUTOMATED="$(kubectl get application -n "${NS_ARGOCD}" "${APP_MATRIX}" \
+  -o jsonpath='{.spec.syncPolicy.automated}' || true)"
+echo "${ORIG_AUTOMATED}" > "${ARTEFACT_DIR}/matrix-automated-original.json"
+
+yellow "The next two operations must run back-to-back to avoid a reconcile race."
+yellow "  a) Suspend ${APP_MATRIX} automated sync (closes survivor's selfHeal window)"
+yellow "  b) Delete ${APP_STANDALONE} Application CR (--cascade=orphan)"
+confirm "Confirm you are at the keyboard and ready to proceed without interruption."
+
+# (a) suspend survivor
+if [[ -n "${ORIG_AUTOMATED}" && "${ORIG_AUTOMATED}" != "null" ]]; then
+  kubectl patch application -n "${NS_ARGOCD}" "${APP_MATRIX}" \
+    --type=merge -p '{"spec":{"syncPolicy":{"automated":null}}}'
+  green "  ✓ Survivor automated sync suspended"
+else
+  yellow "  ! Survivor already had automated=null — proceeding to delete"
+fi
+
+# (b) delete standalone — no second gate
 kubectl delete application -n "${NS_ARGOCD}" "${APP_STANDALONE}" --cascade=orphan
 
 wait_for "Application ${APP_STANDALONE} fully removed" 60 \
