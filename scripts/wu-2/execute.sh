@@ -150,7 +150,7 @@ fi
 kubectl annotate application -n "${NS_ARGOCD}" "${APP_MATRIX}" \
   argocd.argoproj.io/refresh=hard --overwrite
 
-wait_for "${APP_MATRIX} reaches Synced/Healthy" 180 \
+wait_for "${APP_MATRIX} reaches Synced/Healthy" 300 \
   bash -c "[[ \$(kubectl get application -n ${NS_ARGOCD} ${APP_MATRIX} -o jsonpath='{.status.sync.status}') == 'Synced' && \$(kubectl get application -n ${NS_ARGOCD} ${APP_MATRIX} -o jsonpath='{.status.health.status}') == 'Healthy' ]]"
 
 # Verify re-adoption: a sample Deployment should now report matrix tracking-id
