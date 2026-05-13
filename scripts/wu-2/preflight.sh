@@ -62,33 +62,56 @@ if ! kubectl get ns "${NS_ARGOCD}" >/dev/null 2>&1; then
 fi
 
 # ─── 3. Both Applications exist ────────────────────────────────
+# Hypothesis invalid only if the matrix-app is missing (ApplicationSet broken).
+# Standalone absent is the expected post-WU-2 success state, not a failure.
 blue "[3/7] ArgoCD Applications"
+STANDALONE_PRESENT=false
+MATRIX_PRESENT=false
 for app in "${APP_STANDALONE}" "${APP_MATRIX}"; do
   if kubectl get application -n "${NS_ARGOCD}" "${app}" >/dev/null 2>&1; then
     pass "${app} present"
     kubectl get application -n "${NS_ARGOCD}" "${app}" -o yaml \
       > "${ARTEFACT_DIR}/app-${app}.yaml"
+    [[ "${app}" == "${APP_STANDALONE}" ]] && STANDALONE_PRESENT=true
+    [[ "${app}" == "${APP_MATRIX}" ]] && MATRIX_PRESENT=true
   else
-    fail "${app} missing — hypothesis invalid"
+    warn "${app} not present"
   fi
 done
 
-# ─── 4. Sync state — confirm the problem still exists ──────────
-blue "[4/7] Sync state (the problem WU-2 fixes)"
-if kubectl get application -n "${NS_ARGOCD}" "${APP_STANDALONE}" >/dev/null 2>&1; then
-  SYNC_STATUS="$(kubectl get application -n "${NS_ARGOCD}" "${APP_STANDALONE}" \
-    -o jsonpath='{.status.sync.status}')"
-  HEALTH_STATUS="$(kubectl get application -n "${NS_ARGOCD}" "${APP_STANDALONE}" \
-    -o jsonpath='{.status.health.status}')"
-  echo "${APP_STANDALONE}: sync=${SYNC_STATUS} health=${HEALTH_STATUS}" \
-    | tee "${ARTEFACT_DIR}/sync-state.txt"
+if ! ${MATRIX_PRESENT}; then
+  fail "${APP_MATRIX} missing — ApplicationSet broken, hypothesis invalid"
+fi
 
-  if [[ "${SYNC_STATUS}" == "Synced" && "${HEALTH_STATUS}" == "Healthy" ]]; then
-    warn "${APP_STANDALONE} reports Synced/Healthy — problem may have self-resolved"
-    warn "Investigate before proceeding; WU-2 may be a no-op"
-  else
-    pass "${APP_STANDALONE} is ${SYNC_STATUS}/${HEALTH_STATUS} — problem confirmed"
-  fi
+# ─── 4. Sync state — confirm the problem still exists ──────────
+# Check both Applications' .status.sync.status as the primary signal.
+# Problem-confirmed if EITHER is OutOfSync. Health is a separate signal
+# from sync drift; do not couple them.
+blue "[4/7] Sync state (the problem WU-2 fixes)"
+
+# || true suppresses non-zero exit when an Application is missing
+# (kubectl exits 1 for not-found and `set -e` would otherwise kill the script).
+STANDALONE_SYNC=$(kubectl get application -n "${NS_ARGOCD}" "${APP_STANDALONE}" \
+  -o jsonpath='{.status.sync.status}' 2>/dev/null || true)
+STANDALONE_SYNC=${STANDALONE_SYNC:-missing}
+MATRIX_SYNC=$(kubectl get application -n "${NS_ARGOCD}" "${APP_MATRIX}" \
+  -o jsonpath='{.status.sync.status}' 2>/dev/null || true)
+MATRIX_SYNC=${MATRIX_SYNC:-missing}
+
+{
+  echo "${APP_STANDALONE}: sync=${STANDALONE_SYNC}"
+  echo "${APP_MATRIX}: sync=${MATRIX_SYNC}"
+} | tee "${ARTEFACT_DIR}/sync-state.txt"
+
+if [[ "${STANDALONE_SYNC}" == "missing" && "${MATRIX_SYNC}" == "Synced" ]]; then
+  pass "Standalone absent, matrix Synced — duplication already resolved; no WU-2 work"
+elif [[ "${STANDALONE_SYNC}" == "OutOfSync" || "${MATRIX_SYNC}" == "OutOfSync" ]]; then
+  pass "OutOfSync state detected on at least one Application — duplication problem confirmed"
+elif [[ "${STANDALONE_SYNC}" == "Synced" && "${MATRIX_SYNC}" == "Synced" ]]; then
+  warn "Both Applications report Synced — problem may have self-resolved (possible mid-flap)"
+  warn "Re-run 2-3x to confirm stable state before proceeding"
+else
+  warn "Unexpected sync state: standalone=${STANDALONE_SYNC} matrix=${MATRIX_SYNC}"
 fi
 
 # ─── 5. ApplicationSet generating the matrix app ───────────────
