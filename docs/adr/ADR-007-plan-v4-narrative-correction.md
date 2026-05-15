@@ -24,13 +24,14 @@ Concretely, as of 2026-05-13 (BLS-STATUS.md audit baseline):
 
 Six ADRs (ADR-002 through ADR-006, plus the nested ADR-004 under P2), two runbooks, five release tags (`v0.2.0` through `v0.5.0`), and approximately seventy commits.
 
-Three properties of Plan-v3 do not survive contact with this state:
+Four properties of Plan-v3 do not survive contact with this state:
 
 1. **The build schedule presumes work that is already done.** A Week-1-of-18 framing where P1 is described as "to be built" is incoherent with a cluster that has been Running for five days. Subsequent weeks in Plan-v3 inherit the same dissonance.
 2. **The salary anchor (£45–65k) is wrong for the work shipped.** The portfolio's surface area — hub-spoke cloud with deny-by-default NSG posture, HA k3s on bare metal with Ansible-driven hardening, matrix-generator GitOps, in-cluster API gateway with Prometheus instrumentation, Sealed-Secrets controller with a tested restart path and an honest runbook — is the surface area the £75–85k base / £550+/day outside-IR35 band hires against. Anchoring the planning narrative below that band sells the work.
-3. **No bridge document.** Plan-v3 has no artefact that translates the engineering depth to the audience that hires. Recruiters, hiring managers, and technical leads landing on the repo cold get a README written before P4 shipped, a `docs/` directory with ADRs they have to discover by listing, and no scoped reading path. The engineering work is there; the framing is not.
+3. **The implicit title assumption is wrong.** Plan-v3 framed the architect as already holding a Platform Engineer title. The architect's day-job title is Technical Operations Engineer at a UK MSP. The capability the portfolio demonstrates — and the role this plan is calibrated for — is senior platform engineer. Both facts are true simultaneously; the day job has not yet caught up to the capability. Plan-v3 collapsed those into one, which produced positioning language that either overclaimed (asserting the title) or undersold (treating the gap as "transitioning"). Both modes are corrected in Plan-v4: the portfolio is the evidence that bridges title and capability honestly, on the record.
+4. **No bridge document.** Plan-v3 has no artefact that translates the engineering depth to the audience that hires. Recruiters, hiring managers, and technical leads landing on the repo cold get a README written before P4 shipped, a `docs/` directory with ADRs they have to discover by listing, and no scoped reading path. The engineering work is there; the framing is not.
 
-Plan-v4 corrects all three. The cost of the correction is the planning artefact itself (this ADR, the operating doc at `docs/plan-v4/README.md`, the bridge document at `BLS-PLATFORM-ENGINEERING-GUIDE.md`, the concept→tool mapping at `docs/plan-v4/concept-tool-mapping.md`, and the diagram catalogue). The benefit is a portfolio that can be shipped to recruiters in four weeks instead of fourteen.
+Plan-v4 corrects all four. The cost of the correction is the planning artefact itself (this ADR, the operating doc at `docs/plan-v4/README.md`, the bridge document at `BLS-PLATFORM-ENGINEERING-GUIDE.md`, the concept→tool mapping at `docs/plan-v4/concept-tool-mapping.md`, and the diagram catalogue). The benefit is a portfolio that can be shipped to recruiters in four weeks instead of fourteen.
 
 ---
 

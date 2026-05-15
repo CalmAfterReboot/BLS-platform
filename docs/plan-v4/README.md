@@ -14,7 +14,7 @@ The plan is not a rebuild. The engineering work that earned the salary band has 
 
 Two anchors that are not negotiable:
 
-- **The architect is a Platform Engineer currently at an MSP.** Not transitioning. Not aspiring. Not learning. Positioning language reflects that.
+- **The architect's day-job title is Technical Operations Engineer at a UK MSP. The capability the portfolio demonstrates — and the target role this plan is calibrated for — is senior platform engineer.** Both are true simultaneously: the day job has not yet caught up to the capability. The portfolio is the evidence that bridges that gap. Positioning language honours both facts — no "transitioning," "aspiring," "junior," or "learning"; equally, no overclaim that the current title is already Platform Engineer.
 - **Salary anchor is £75–85k base / £550+/day outside IR35.** Every artefact in this plan is calibrated for that band. The earlier £45–65k anchor in Plan-v3 was wrong for the work shipped and is retired (see §6).
 
 ## 2. The 6-week shape
