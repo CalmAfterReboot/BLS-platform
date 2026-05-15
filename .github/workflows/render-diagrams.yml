@@ -1,0 +1,69 @@
+name: Render diagrams
+
+# Renders Python `diagrams` library sources under docs/diagrams/ to PNG.
+# Mermaid (.mmd) sources are rendered natively by GitHub and require no build.
+#
+# Triggers on push to any branch when a .py file under docs/diagrams/ changes,
+# and on manual dispatch. If the rendered .png output differs from the version
+# in the tree, the workflow commits the updated PNG back to the same branch.
+
+on:
+  push:
+    paths:
+      - "docs/diagrams/**/*.py"
+      - ".github/workflows/render-diagrams.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    name: Render Python diagrams
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history so the auto-commit step can push back to the
+          # source branch without a detached-HEAD shallow-clone pitfall.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+
+      - name: Install diagrams package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "diagrams==0.23.4"
+
+      - name: Render every .py under docs/diagrams/
+        working-directory: docs/diagrams
+        run: |
+          shopt -s nullglob
+          for source in *.py; do
+            echo "Rendering $source"
+            python "$source"
+          done
+
+      - name: Commit rendered PNGs if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [[ -z "$(git status --porcelain docs/diagrams/)" ]]; then
+            echo "No diagram output changes — nothing to commit."
+            exit 0
+          fi
+
+          git add docs/diagrams/
+          git commit -m "ci(diagrams): re-render Python diagram outputs"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

@@ -1,0 +1,49 @@
+%%{init: {'theme':'neutral','flowchart':{'curve':'basis'}}}%%
+flowchart LR
+    %% System context (C4-style) — BLS Platform at centre, external actors and systems around it.
+
+    %% External actors (people)
+    Engineer["Platform Engineer<br/>(architect)"]:::actor
+    HiringManager["Hiring Manager<br/>/ Technical Lead"]:::actor
+    Recruiter["Recruiter"]:::actor
+
+    %% System under description
+    BLS(("Blue Layer Systems<br/>Platform monorepo<br/>P1 - P5 built, P6 empty")):::system
+
+    %% External systems
+    GitHub["GitHub<br/>(source of truth, releases, CI)"]:::external
+    Azure["Microsoft Azure<br/>(P1 landing zone, state backend)"]:::external
+    Proxmox["Proxmox Homelab<br/>(k3s cluster, ArgoCD, workloads)"]:::external
+    LLMProviders["LLM Providers<br/>(OpenAI-compatible upstreams)"]:::external
+
+    %% Architect <-> system
+    Engineer -- "builds, operates, documents" --> BLS
+    BLS -- "feedback via runbooks, ADRs, incidents" --> Engineer
+
+    %% Audience -> system
+    HiringManager -- "reads bridge document, ADRs, runbooks" --> BLS
+    Recruiter -- "scopes role against portfolio claims" --> BLS
+
+    %% System -> external systems
+    BLS -- "push commits, releases, PRs" --> GitHub
+    BLS -- "terraform apply, NSG, Log Analytics" --> Azure
+    BLS -- "kubectl, Terraform via Proxmox API, Ansible SSH" --> Proxmox
+    BLS -- "FastAPI/LiteLLM gateway → upstream API calls" --> LLMProviders
+
+    %% External system -> external system (audit trail)
+    GitHub -. "pull-based GitOps reconciliation (ArgoCD)" .-> Proxmox
+
+    classDef actor fill:#dbeafe,stroke:#1e3a8a,stroke-width:1.5px,color:#0f172a;
+    classDef system fill:#fef3c7,stroke:#92400e,stroke-width:2px,color:#0f172a;
+    classDef external fill:#e5e7eb,stroke:#374151,stroke-width:1px,color:#0f172a;
+
+%% Caption — supports BLS-PLATFORM-ENGINEERING-GUIDE.md §1 (the signal). The
+%% BLS Platform sits at the centre. On the left, the people who interact with
+%% it: the Platform Engineer builds and operates it; the Hiring Manager and
+%% Recruiter read it as the artefact of the architect's capability. On the
+%% right, the external systems the platform depends on: GitHub as source of
+%% truth, Azure for the landing zone and Terraform state backend, the Proxmox
+%% homelab for the k3s cluster and live workloads, and the upstream LLM
+%% providers consumed via the in-cluster FastAPI/LiteLLM gateway. The dotted
+%% edge from GitHub to Proxmox names the GitOps reconciliation path — Git is
+%% the source, ArgoCD pulls.

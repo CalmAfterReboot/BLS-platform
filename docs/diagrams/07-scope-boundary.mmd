@@ -1,0 +1,40 @@
+%%{init: {'theme':'neutral','flowchart':{'curve':'basis'}}}%%
+flowchart LR
+    %% Scope discipline: in-scope claims (left) vs deliberate non-claims (right).
+
+    subgraph IN["IN SCOPE — what this portfolio claims"]
+        direction TB
+        I1["Hub-spoke Azure landing zone<br/>Terraform + remote state + locking"]:::inscope
+        I2["HA k3s cluster on Proxmox<br/>Ansible node-hardening role"]:::inscope
+        I3["Matrix ApplicationSet<br/>N×M GitOps reconciliation"]:::inscope
+        I4["LiteLLM/FastAPI gateway<br/>live, metrics exposed"]:::inscope
+        I5["kube-prometheus-stack + Sealed Secrets<br/>runbook, restart test, key backup"]:::inscope
+        I6["6 ADRs, 2 runbooks, 5 release tags<br/>incident response documented"]:::inscope
+    end
+
+    subgraph OUT["OUT OF SCOPE — deliberate non-claims"]
+        direction TB
+        O1["Multi-tenant production workload<br/>RBAC partitioning at scale"]:::outscope
+        O2["AWS / GCP production depth<br/>(GCP on P6 roadmap, not built)"]:::outscope
+        O3["Platform-team-of-N coordination<br/>(this is a one-architect portfolio)"]:::outscope
+        O4["AKS currently running<br/>(torn down for £60 spend cap; rebuild = WU-5)"]:::outscope
+        O5["Every WU closed<br/>(WU-3, 4, 5, 6, 8, 9 open and tracked)"]:::outscope
+        O6["Formal 24/7 SRE on-call<br/>(MSP context, not in this repo)"]:::outscope
+    end
+
+    IN ~~~ OUT
+
+    classDef inscope fill:#dcfce7,stroke:#166534,stroke-width:1.5px,color:#0f172a;
+    classDef outscope fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,color:#374151;
+
+    style IN fill:#f0fdf4,stroke:#15803d,stroke-width:2px;
+    style OUT fill:#fafafa,stroke:#9ca3af,stroke-width:2px,stroke-dasharray: 4 3;
+
+%% Caption — supports BLS-PLATFORM-ENGINEERING-GUIDE.md §6 (what this portfolio
+%% deliberately doesn't claim) and Plan-v4 operating doc §5. Two columns. Left:
+%% what the portfolio has built and is willing to be tested on. Right: what the
+%% portfolio explicitly does not claim — multi-tenant production, AWS/GCP
+%% depth, platform-team-of-N coordination, currently-running AKS, every work
+%% unit closed, 24/7 SRE on-call. Scope discipline is a hiring signal. A
+%% portfolio that pretends every loose end is tied is a portfolio that cannot
+%% be trusted on the tied ones.
