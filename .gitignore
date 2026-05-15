@@ -30,3 +30,9 @@ scripts/wu-2/artefacts/
 
 # Phase sprint handoff docs (session continuity, never commit)
 PHASE-*-HANDOFF.md
+
+# Plan-v4 working docs — local only, never commit
+docs/plan-v4/
+
+# Downloaded artefacts from Claude sessions — local only
+files/
