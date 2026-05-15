@@ -159,7 +159,7 @@ A portfolio is as much about what is not in it as what is. The following are cho
 
 This portfolio is verifiable end-to-end. Every claim above drills down through these paths:
 
-**Repository.** [`github.com/CalmAfterReboot/BLS-DevOps`](https://github.com/CalmAfterReboot/BLS-DevOps) — full source, all infrastructure-as-code, all deployment manifests, all CI workflows. Read access is public; the commit history is the audit trail.
+**Repository.** [`github.com/CalmAfterReboot/BLS-platform`](https://github.com/CalmAfterReboot/BLS-platform) — full source, all infrastructure-as-code, all deployment manifests, all CI workflows. Read access is public; the commit history is the audit trail.
 
 **Architecture Decision Records.** [`docs/adr/`](docs/adr/) — all decisions of substance, rationale and rejected alternatives included. Start with [`ADR-005-applicationset-matrix-pattern.md`](docs/adr/ADR-005-applicationset-matrix-pattern.md) for the multi-cluster delivery thinking and [`ADR-006-observability-gitops.md`](docs/adr/ADR-006-observability-gitops.md) for the observability deployment choices.
 
