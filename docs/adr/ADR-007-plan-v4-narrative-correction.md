@@ -27,7 +27,7 @@ Six ADRs (ADR-002 through ADR-006, plus the nested ADR-004 under P2), two runboo
 Four properties of Plan-v3 do not survive contact with this state:
 
 1. **The build schedule presumes work that is already done.** A Week-1-of-18 framing where P1 is described as "to be built" is incoherent with a cluster that has been Running for five days. Subsequent weeks in Plan-v3 inherit the same dissonance.
-2. **The salary anchor (£45–65k) is wrong for the work shipped.** The portfolio's surface area — hub-spoke cloud with deny-by-default NSG posture, HA k3s on bare metal with Ansible-driven hardening, matrix-generator GitOps, in-cluster API gateway with Prometheus instrumentation, Sealed-Secrets controller with a tested restart path and an honest runbook — is the surface area the £75–85k base / £550+/day outside-IR35 band hires against. Anchoring the planning narrative below that band sells the work.
+2. **The salary anchor (£45–65k) is wrong for the work shipped.** The portfolio's surface area — hub-spoke cloud with deny-by-default NSG posture, HA k3s on bare metal with Ansible-driven hardening, matrix-generator GitOps, in-cluster API gateway with Prometheus instrumentation, Sealed-Secrets controller with a tested restart path and an honest runbook — is the surface area the £75–85k base salary band (permanent, UK remote-first) hires against. Anchoring the planning narrative below that band sells the work.
 3. **The implicit title assumption is wrong.** Plan-v3 framed the architect as already holding a Platform Engineer title. The architect's day-job title is Technical Operations Engineer at a UK MSP. The capability the portfolio demonstrates — and the role this plan is calibrated for — is senior platform engineer. Both facts are true simultaneously; the day job has not yet caught up to the capability. Plan-v3 collapsed those into one, which produced positioning language that either overclaimed (asserting the title) or undersold (treating the gap as "transitioning"). Both modes are corrected in Plan-v4: the portfolio is the evidence that bridges title and capability honestly, on the record.
 4. **No bridge document.** Plan-v3 has no artefact that translates the engineering depth to the audience that hires. Recruiters, hiring managers, and technical leads landing on the repo cold get a README written before P4 shipped, a `docs/` directory with ADRs they have to discover by listing, and no scoped reading path. The engineering work is there; the framing is not.
 
@@ -73,17 +73,17 @@ Run a twelve-week instead of six-week plan. Allow time for deeper per-project de
 
 Six weeks of polish-and-position on the existing monorepo. The monorepo stays. The build schedule is replaced with a six-week shape: bootstrap and bridge-document skeleton (Week 1), bridge-document expansion plus core diagrams plus WU-3 closure (Week 2), remaining diagrams plus WU-4/WU-6/WU-9 plus CV/LinkedIn rewrite (Week 3), WU-5 decision plus scope-honesty pass plus capstone post plus first applications (Week 4), interview kata plus portfolio final pass plus scaled applications (Week 5), final rounds plus negotiation prep plus retrospective (Week 6).
 
-Salary anchor £75–85k base / £550+/day outside IR35. Bridge document and diagram catalogue are first-class deliverables. Concept-first, tool-second framing applied uniformly.
+Salary anchor £75–85k base salary, permanent roles only, UK remote-first. Contract / day-rate / outside-IR35 work is explicitly out of scope: base salary security is the deliberate prioritisation while the portfolio bridges the current-title-versus-capability gap. Bridge document and diagram catalogue are first-class deliverables. Concept-first, tool-second framing applied uniformly.
 
 ---
 
 ## Decision
 
-**Adopt Plan-v4: six-week narrative + closure plan, monorepo retained, salary anchor £75–85k, bridge document plus diagram catalogue, concept-first framing.**
+**Adopt Plan-v4: six-week narrative + closure plan, monorepo retained, salary anchor £75–85k base salary for permanent UK remote-first roles, bridge document plus diagram catalogue, concept-first framing.**
 
 The operational expression of this decision is in `docs/plan-v4/README.md`. The narrative expression is in `BLS-PLATFORM-ENGINEERING-GUIDE.md`. The reference table that keeps the framing consistent across artefacts is in `docs/plan-v4/concept-tool-mapping.md`.
 
-Time horizon: six weeks. Success criterion: an offer pipeline at the £75–85k base or £550+/day outside-IR35 band by the end of Week 6. Reassessment trigger: if Week 6 closes with no offer pipeline, the plan exits with a written retrospective on what the six weeks produced, what worked, what did not, and which assumptions need revising before the next attempt. No mid-plan replacement.
+Time horizon: six weeks. Success criterion: an offer pipeline for **permanent platform engineer roles at the £75–85k base salary band** by the end of Week 6. Contract, day-rate, and outside-IR35 work is explicitly out of scope for this attempt — base salary security is the deliberate prioritisation, not an oversight. Reassessment trigger: if Week 6 closes with no offer pipeline, the plan exits with a written retrospective on what the six weeks produced, what worked, what did not, and which assumptions need revising before the next attempt. No mid-plan replacement.
 
 ---
 
@@ -155,4 +155,4 @@ Weeks 2 through 6 are scoped in `docs/plan-v4/README.md` §2 (the 6-week shape).
 
 ### Review trigger
 
-This ADR is reviewed at end of Week 6 against the success criterion (offer pipeline at the £75–85k base or £550+/day outside-IR35 band). If the criterion is met, the ADR's Status stays Accepted; the retrospective links from here. If not, the retrospective drives the next ADR (ADR-008) that supersedes this one.
+This ADR is reviewed at end of Week 6 against the success criterion (offer pipeline for permanent platform engineer roles at the £75–85k base salary band). If the criterion is met, the ADR's Status stays Accepted; the retrospective links from here. If not, the retrospective drives the next ADR (ADR-008) that supersedes this one.

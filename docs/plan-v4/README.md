@@ -2,11 +2,11 @@
 
 > Replaces the build schedule in `BLS-master-plan-v3.md`. Treat this file as the single source of truth for what gets built in the next six weeks and what does not.
 
-The substantive engineering is done. P1–P5 are built. The work that remains is narrative: making the portfolio legible to the audience that hires for £75–85k base / £550+/day outside-IR35 UK platform engineer roles. Plan-v4 is the six-week harness that closes that gap.
+The substantive engineering is done. P1–P5 are built. The work that remains is narrative: making the portfolio legible to the audience that hires for permanent UK platform engineer roles at the £75–85k base salary band. Plan-v4 is the six-week harness that closes that gap.
 
 ## 1. North Star
 
-**Interview-ready portfolio in 6 weeks at the £75–85k band.**
+**Interview-ready portfolio in 6 weeks at the £75–85k base band (permanent, UK remote-first).**
 
 "Interview-ready" has a hard definition: a hiring manager landing on the repo's root README, the bridge document, and the diagram catalogue gets the £80k signal in 90 seconds — concept depth visible, scope honest, tools justified, evidence linked. If they want more, every claim drills down to an ADR, a runbook, a diagram, or a live Application in the cluster.
 
@@ -15,7 +15,7 @@ The plan is not a rebuild. The engineering work that earned the salary band has 
 Two anchors that are not negotiable:
 
 - **The architect's day-job title is Technical Operations Engineer at a UK MSP. The capability the portfolio demonstrates — and the target role this plan is calibrated for — is senior platform engineer.** Both are true simultaneously: the day job has not yet caught up to the capability. The portfolio is the evidence that bridges that gap. Positioning language honours both facts — no "transitioning," "aspiring," "junior," or "learning"; equally, no overclaim that the current title is already Platform Engineer.
-- **Salary anchor is £75–85k base / £550+/day outside IR35.** Every artefact in this plan is calibrated for that band. The earlier £45–65k anchor in Plan-v3 was wrong for the work shipped and is retired (see §6).
+- **Salary anchor is £75–85k base salary, permanent roles only, UK remote-first.** Every artefact in this plan is calibrated for that band and that employment type. The earlier £45–65k anchor in Plan-v3 was wrong for the work shipped and is retired (see §6). Contract, day-rate, and outside-IR35 work are explicitly out of scope for this attempt — base salary security is the deliberate prioritisation while the portfolio bridges the current-title-versus-capability gap.
 
 ## 2. The 6-week shape
 
