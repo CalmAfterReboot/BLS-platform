@@ -1,0 +1,36 @@
+%%{init: {'theme':'neutral','sequence':{'showSequenceNumbers':true,'mirrorActors':false}}}%%
+sequenceDiagram
+    %% Multi-cluster GitOps reconciliation — the ApplicationSet matrix pattern in motion.
+
+    actor Dev as Platform Engineer
+    participant Git as GitHub<br/>(source of truth)
+    participant AS as ApplicationSet<br/>bls-workloads<br/>(matrix generator)
+    participant ArgoCD as ArgoCD controller<br/>(in-cluster on k3s)
+    participant K3s as k3s cluster<br/>(homelab)
+    participant AKS as AKS cluster<br/>(bls-aks-demo)
+
+    Dev->>Git: git push to main<br/>(values.yaml change)
+    Git-->>AS: webhook OR ArgoCD polls<br/>(3-min reconcile interval)
+    Note over AS: Matrix generator:<br/>[clusters] × [workloads]<br/>= N Applications
+
+    AS->>ArgoCD: generates Applications<br/>llm-gateway-in-cluster<br/>llm-gateway-bls-aks-demo<br/>(+ other workloads)
+
+    par Reconcile to k3s
+        ArgoCD->>K3s: helm template + kubectl apply
+        K3s-->>ArgoCD: resource status<br/>(Synced / Healthy)
+    and Reconcile to AKS
+        ArgoCD->>AKS: helm template + kubectl apply
+        AKS-->>ArgoCD: resource status<br/>(Synced / Healthy)
+    end
+
+    ArgoCD-->>Dev: UI shows<br/>both child apps Synced/Healthy
+
+    Note over ArgoCD,AKS: selfHeal=true: any manual drift<br/>in either cluster is reverted<br/>within minutes.
+
+%% Caption — supports BLS-PLATFORM-ENGINEERING-GUIDE.md §4 (P3 multi-cluster
+%% GitOps) and ADR-005 (ApplicationSet matrix pattern). The diagram shows the
+%% full reconciliation cycle for a single git push: ApplicationSet expands the
+%% matrix into one Application per (cluster × workload) pair, ArgoCD reconciles
+%% each Application to its target cluster in parallel, and health rolls back up.
+%% The closing note captures why selfHeal=true is load-bearing — drift in
+%% either cluster is a bug, and ArgoCD is the mechanism that treats it as one.

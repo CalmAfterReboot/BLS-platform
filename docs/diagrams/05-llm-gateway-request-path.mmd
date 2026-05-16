@@ -1,0 +1,50 @@
+%%{init: {'theme':'neutral','sequence':{'showSequenceNumbers':true,'mirrorActors':false}}}%%
+sequenceDiagram
+    %% LLM gateway request path — single completion request from caller to backend and back.
+
+    actor Caller as Client<br/>(SDK / curl)
+    participant Ingress as Traefik ingress<br/>(k3s)
+    participant FastAPI as FastAPI proxy<br/>(:8000)
+    participant Auth as middleware/auth.py<br/>(Bearer check)
+    participant LiteLLM as LiteLLM router<br/>(:4000, proxy mode)
+    participant Cache as Redis<br/>(exact-match cache)
+    participant Ollama as Ollama<br/>(Proxmox host, port 11434)
+    participant AOAI as Azure OpenAI<br/>(cloud)
+    participant Prom as Prometheus<br/>(scrape, async)
+
+    Caller->>Ingress: POST /v1/chat/completions<br/>Authorization: Bearer <key>
+    Ingress->>FastAPI: route to gateway service
+    FastAPI->>Auth: validate Bearer token
+    alt invalid / missing token
+        Auth-->>Caller: 401 / 403
+    else valid
+        Auth-->>FastAPI: pass
+        FastAPI->>LiteLLM: POST /v1/chat/completions<br/>(forward body + Authorization)
+        LiteLLM->>Cache: GET cached completion<br/>(exact-match key)
+        alt cache hit
+            Cache-->>LiteLLM: cached completion
+        else cache miss
+            Note over LiteLLM: routing_strategy: least-busy<br/>(num_retries: 2, timeout: 120s)
+            alt model = local/*
+                LiteLLM->>Ollama: HTTP /api/chat<br/>(over homelab LAN)
+                Ollama-->>LiteLLM: completion
+            else model = azure/*
+                LiteLLM->>AOAI: HTTPS /openai/deployments/...
+                AOAI-->>LiteLLM: completion
+            end
+            LiteLLM->>Cache: SET completion (TTL=3600s)
+        end
+        LiteLLM-->>FastAPI: completion (OpenAI dialect)
+        FastAPI-->>Caller: 200 OK + completion JSON
+    end
+
+    Note over Prom,FastAPI: ServiceMonitor scrapes<br/>FastAPI /metrics every 30s<br/>(out-of-band, no effect on request path)
+    Prom-->>FastAPI: GET /metrics (every 30s, async)
+
+%% Caption — supports BLS-PLATFORM-ENGINEERING-GUIDE.md §4 (P4 LLM gateway).
+%% Shows the full request path: ingress → FastAPI auth → LiteLLM router (with
+%% cache-hit / cache-miss branch) → backend selection (Ollama on the Proxmox
+%% host vs cloud provider) → response. The async scrape edge from Prometheus
+%% is rendered separately because it is not part of the request path — it is
+%% an out-of-band observation, and conflating the two is the most common
+%% diagrammatic mistake on observability-aware services.
