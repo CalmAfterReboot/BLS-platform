@@ -19,7 +19,7 @@ A self-hosted LLM gateway built on FastAPI and LiteLLM, providing a unified Open
 
 | Service | URL |
 |---------|-----|
-| Proxmox Ollama | http://10.212.46.5:11434 |
+| Proxmox Ollama | http://&lt;homelab-ollama-host&gt;:11434 |
 
 ## Layout
 
