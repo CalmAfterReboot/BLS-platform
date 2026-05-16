@@ -1,0 +1,59 @@
+Diff timestamp (UTC): 20260516T175954Z
+Commit: 20b24a6e611f864639f79fec6294360e42a47741
+
+Pre-condition verified: matrix-app .spec.source has no helm block.
+ApplicationSet .spec.template.spec.source has no helm block.
+Therefore this diff reflects how ArgoCD actually renders the canonical
+chart vs how it would have rendered the now-deprecated 04-llm-gateway/.
+
+=== helm template diff (standalone 04-llm-gateway/ vs canonical k8s/workloads/llm-gateway/) ===
+
+helm template (standalone) exit: 0
+helm template (canonical)  exit: 0
+
+--- /tmp/std.yaml	2026-05-16 18:59:54.100999963 +0100
++++ /tmp/can.yaml	2026-05-16 18:59:54.171000268 +0100
+@@ -54,11 +54,14 @@
+ metadata:
+   name: llm-gateway-service
+   namespace: llm-gateway
++  labels:
++    app: llm-gateway
+ spec:
+   selector:
+     app: llm-gateway
+   ports:
+-    - port: 8000
++    - name: http
++      port: 8000
+       targetPort: 8000
+   type: ClusterIP
+ ---
+@@ -243,3 +246,25 @@
+                 name: llm-gateway-service
+                 port:
+                   number: 8000
++---
++# Source: llm-gateway/templates/servicemonitor-gateway.yaml
++apiVersion: monitoring.coreos.com/v1
++kind: ServiceMonitor
++metadata:
++  name: llm-gateway
++  namespace: llm-gateway
++  labels:
++    app: llm-gateway
++    release: kube-prometheus-stack
++spec:
++  selector:
++    matchLabels:
++      app: llm-gateway
++  endpoints:
++    - port: http
++      path: /metrics
++      interval: 30s
++      scrapeTimeout: 10s
++  namespaceSelector:
++    matchNames:
++      - llm-gateway
+
+diff exit: 1  (0=identical, 1=differs, >1=error)

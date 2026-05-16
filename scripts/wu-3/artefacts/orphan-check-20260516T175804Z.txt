@@ -1,0 +1,97 @@
+WU-3 orphan check — re-run at branch HEAD of feat/plan-v4-week-2-diagrams-and-wu3
+Timestamp (UTC): 20260516T175804Z
+Commit: 20b24a6e611f864639f79fec6294360e42a47741
+kubectl context: default
+
+=== Step 1a: grep across YAML/YML/MD/SH for '04-llm-gateway' ===
+(excluding .git, files, artefacts, .terraform)
+
+BLS-PLATFORM-ENGINEERING-GUIDE.md:71:**Project state caveat:** a chart-deduplication closure is pending (WU-3 in [`PHASE-2-HANDOFF.md`](PHASE-2-HANDOFF.md), gitignored — local-only) — an earlier duplicate chart under `04-llm-gateway/` is scheduled for removal once the orphan-check gate passes. The canonical chart is at `k8s/workloads/llm-gateway/`. Tracked transparently because portfolio honesty is itself a hiring signal.
+BLS-PLATFORM-ENGINEERING-GUIDE.md:118:- *Request-path diagram reference:* [`docs/diagrams/04-llm-gateway-request-path.png`](docs/diagrams/) (to be rendered Week 3)
+.pre-commit-config.yaml:8:        exclude: '^(k8s|04-llm-gateway)/.*templates/.*\.yaml$'
+k8s/workloads/llm-gateway/README.md:27:04-llm-gateway/
+k8s/workloads/llm-gateway/README.md:50:helm lint 04-llm-gateway/
+k8s/workloads/llm-gateway/README.md:51:helm install llm-gateway 04-llm-gateway/ -f 04-llm-gateway/values-aks.yaml
+docs/plan-v4/01-cleanup-audit.md:11:| `04-llm-gateway/` (whole tree — Chart.yaml, templates/, values.yaml, values-aks.yaml, app/, README.md) | Duplicate Helm chart. Canonical chart is `k8s/workloads/llm-gateway/` and the matrix ApplicationSet (ADR-005) is the single source of truth for delivery. PHASE-2-HANDOFF.md flags this as WU-3 with a five-step deletion gate already drafted. | **Delete** under WU-3 — do not bundle into this PR | WU-3 is a substantive engineering action requiring an orphan-check gate, a values-aware chart diff, and a pre-deletion baseline snapshot. Folding it into a narrative-bootstrap PR would conflate concerns and obscure the diff. Plan-v4 Week 2 closes WU-3 as its own work unit. |
+docs/plan-v4/01-cleanup-audit.md:12:| `04-llm-gateway/README.md` (993 lines) | Embedded in the duplicate chart tree. Contains the project's substantive P4 documentation, which the canonical chart's 52-line scaffold does not replace. | **Move content to WU-9** before the WU-3 delete | PHASE-2-HANDOFF.md WU-9 already scopes this: rebuild a canonical `k8s/workloads/llm-gateway/README.md` with quality-controlled content port, not verbatim copy. Sequence: WU-3 deletion is gated on WU-9 having extracted whatever still applies. |
+docs/plan-v4/01-cleanup-audit.md:32:None of the proposed actions in this audit would lose unrecoverable context. The two largest blobs (`04-llm-gateway/README.md`, `docs/BLS-Platform-Operations-Guide.docx`) have explicit "port the content first" preconditions. The `.terraform/` cache directory contains no human-authored content. Everything else is "keep" or "move."
+docs/plan-v4/01-cleanup-audit.md:53:| `04-llm-gateway/` whole tree | **Actioning in this PR** as TASK 2 (WU-3). 5-step deletion gate executing now. |
+docs/plan-v4/01-cleanup-audit.md:54:| `04-llm-gateway/README.md` (993 lines) | **Actioning in this PR** as TASK 3 (WU-9). Content captured before deletion per override 2; canonical README rebuilt with quality-controlled port. |
+docs/diagrams/README.md:83:| 04 | `04-llm-gateway-request-path.mmd` | Mermaid sequence | LLM gateway request path — client request, FastAPI route, LiteLLM provider selection, Redis cache hit/miss branch, response, `/metrics` observation. | Bridge document §4.4 |
+scripts/wu-2/preflight.sh:172:MANIFEST="${REPO_ROOT}/04-llm-gateway/argocd-app.yaml"
+scripts/wu-2/execute.sh:18:MANIFEST="${REPO_ROOT}/04-llm-gateway/argocd-app.yaml"
+scripts/wu-2/execute.sh:191:Standalone Application in 04-llm-gateway/argocd-app.yaml was racing
+scripts/wu-2/execute.sh:197:- Removed 04-llm-gateway/argocd-app.yaml from git
+04-llm-gateway/README.md:103:The project lives in two places in the repository. `04-llm-gateway/` is the working
+04-llm-gateway/README.md:105:ArgoCD watches. They are kept in sync — any change to `04-llm-gateway/` is mirrored to
+04-llm-gateway/README.md:109:04-llm-gateway/
+04-llm-gateway/README.md:184:kubectl apply -f 04-llm-gateway/argocd-app.yaml
+04-llm-gateway/README.md:532:The chart lives at `k8s/workloads/llm-gateway/` rather than `04-llm-gateway/` because the
+04-llm-gateway/README.md:534:repository. The `04-llm-gateway/` directory is the project working directory, which also
+04-llm-gateway/README.md:626:.env" > 04-llm-gateway/app/.gitignore
+04-llm-gateway/README.md:628:git rm -r --cached 04-llm-gateway/app/__pycache__/
+04-llm-gateway/README.md:629:git rm -r --cached 04-llm-gateway/app/middleware/__pycache__/
+04-llm-gateway/README.md:630:git rm -r --cached 04-llm-gateway/app/routers/__pycache__/
+04-llm-gateway/README.md:950:git log --oneline -- 04-llm-gateway/ k8s/workloads/llm-gateway/
+
+=== Step 1b: kubectl get applications -A — .spec.source.path == '04-llm-gateway' ===
+(zero matches)
+
+=== Step 1c: kubectl get applicationset -A — template path == '04-llm-gateway' ===
+(zero matches)
+
+=== Step 1d: kubectl get secrets -n llm-gateway -l owner=helm (stale Helm release Secret check) ===
+No resources found in llm-gateway namespace.
+
+=== Reference classification ===
+
+YAML/YML hits in operational manifests (the consumer gate):
+  .pre-commit-config.yaml:8 — exclude pattern, NOT a consumer. Dead
+                              reference. Cleaned as part of the WU-3
+                              deletion commit per the architect's
+                              pre-flight instruction.
+
+Markdown hits (documentation; none gate the deletion):
+  BLS-PLATFORM-ENGINEERING-GUIDE.md:71  — narrates the pending WU-3
+                                          closure; prose becomes stale
+                                          after deletion. Updated as
+                                          part of TASK 7 in this PR.
+  BLS-PLATFORM-ENGINEERING-GUIDE.md:118 — refers to a diagram filename
+                                          "04-llm-gateway-request-path.png".
+                                          The leading "04-" is the diagram
+                                          ordering number, not the project
+                                          directory. Name collision; leave
+                                          intact.
+  docs/plan-v4/01-cleanup-audit.md      — running cleanup-audit log;
+                                          leave intact.
+  docs/diagrams/README.md:83            — same diagram filename collision
+                                          as above.
+  k8s/workloads/llm-gateway/README.md   — the 52-line stub still names
+                                          "04-llm-gateway/" in its Layout
+                                          and Helm sections. This file is
+                                          REBUILT by WU-9 (TASK 3); hits
+                                          resolve via that rebuild.
+  04-llm-gateway/README.md              — entire file deleted in Step 4.
+
+Shell-script hits (historical; not consumers):
+  scripts/wu-2/preflight.sh:172
+  scripts/wu-2/execute.sh:18,191,197    — historical WU-2 tooling. The
+                                          referenced file
+                                          04-llm-gateway/argocd-app.yaml
+                                          was already removed in WU-2
+                                          closure commit 76b04e4.
+                                          BLS-STATUS.md says these
+                                          scripts are retained for
+                                          reference. Not consumers;
+                                          leave alone.
+
+=== Gate status ===
+
+OPERATIONAL CONSUMERS: zero.
+  - Zero ArgoCD Application CRs with .spec.source.path == "04-llm-gateway"
+  - Zero ApplicationSet CRs with template path == "04-llm-gateway"
+  - No stale Helm release Secret in llm-gateway namespace
+  - The only YAML hit (.pre-commit-config.yaml:8) is a dead exclude pattern,
+    not a consumer, and is cleaned in the deletion commit
+
+GATE: GREEN. Proceeding to Step 2.

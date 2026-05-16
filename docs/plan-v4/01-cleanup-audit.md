@@ -30,3 +30,43 @@ Scope of this audit: the public monorepo at the top level, `docs/`, `scripts/`, 
 ## Failure-mode flag
 
 None of the proposed actions in this audit would lose unrecoverable context. The two largest blobs (`04-llm-gateway/README.md`, `docs/BLS-Platform-Operations-Guide.docx`) have explicit "port the content first" preconditions. The `.terraform/` cache directory contains no human-authored content. Everything else is "keep" or "move."
+
+---
+
+# Plan-v4 Week 2 — Cleanup audit (appended)
+
+> Re-run at the start of Week 2 against the merged Week 1 baseline. Appended rather than replacing the Week 1 audit so the running log stays intact. **No deletions performed in this audit.** Items actioned in this PR are listed under "Status of Week 1 findings" below.
+
+## New findings (surfaced during Week 2 pre-flight)
+
+| File / location | Reason it may be obsolete or wrong | Proposed action | Justification |
+|---|---|---|---|
+| `k8s/workloads/llm-gateway/values.yaml:46` (`proxmox.ollamaEndpoint: "http://10.212.46.5:11434"`) | Same homelab IP surfaced in `PHASE-2-HANDOFF.md`'s "Pending post-WU-3 priority chore" — but in an operationally load-bearing values default, not documentation. The README scrub is in scope of this PR (Week 2, override 1); the values.yaml IP is **out of scope** because genericising it to a placeholder would break the live chart's runtime behaviour. | **Surface to architect — handle in a follow-up commit alongside an ADR or as part of WU-4.** Do not auto-scrub. | Two coupled questions: (1) whether the public default should point at a private homelab IP at all (probably not — the default value is a public artefact, the actual endpoint is environment-specific), and (2) where the real value should live (Helm values override file, SealedSecret, ConfigMap loaded from outside the chart, etc.). The right answer is a small ADR or a WU-4-adjacent fix, not a drive-by `sed`. The README scrub does not depend on solving this. |
+| `02-k3s-platform/ansible/roles/node-hardening/defaults/main.yml:96` (`fail2ban_ignoreip: "127.0.0.1/8 192.168.200.0/24 10.212.46.0/24"`) | Discloses the homelab subnet structure (`10.212.46.0/24`) in a committed Ansible defaults file. Same blast-radius category as the README IP: harmless in isolation, undesirable as a pattern given the "scrubbed from CLAUDE.md = scrubbed everywhere" principle. | **Surface to architect — defer to scrub-procedure audit.** Do not auto-scrub. | Defaults files in Ansible roles are intentionally public-by-design — the role is meant to be re-runnable by other operators. Genericising to a variable (`fail2ban_ignoreip: "{{ trusted_cidrs }}"` with a documented `vars/` override pattern) is a small refactor with a small ADR's worth of justification. Belongs in its own commit, not bundled into WU-3. |
+| **Process gap** — how did `10.212.46.5` survive the pre-session scrub that removed it from `CLAUDE.md` (commit `1bb7d0b`)? | PHASE-2-HANDOFF.md flags this as the "open process-gap question" — was the original scrub scoped to specific paths, was the grep pattern wrong, or were in-tree READMEs and Ansible defaults simply not in the scrub plan? | **Address before WU-9 closes** — write the scrub procedure as a runbook entry under `docs/runbooks/` so the next sensitive-data review has a known-good procedure. | The IP fix itself is a one-line `sed`. The runbook entry is the engineering work that prevents the next miss. This audit row exists to make sure the runbook entry doesn't get dropped when the README scrub passes. |
+| `docs/plan-v4/01-cleanup-audit.md` (this file) | Single audit growing across multiple weeks is now ~70 lines. Still readable. | **Keep appending; reconsider split if it exceeds ~200 lines.** | A running log is more useful than separate weekly files at this scale. Splitting prematurely buys nothing and costs cross-week visibility. |
+
+## Status of Week 1 findings
+
+| Week 1 row | Status going into Week 2 |
+|---|---|
+| `04-llm-gateway/` whole tree | **Actioning in this PR** as TASK 2 (WU-3). 5-step deletion gate executing now. |
+| `04-llm-gateway/README.md` (993 lines) | **Actioning in this PR** as TASK 3 (WU-9). Content captured before deletion per override 2; canonical README rebuilt with quality-controlled port. |
+| `03-aks-multicluster/terraform/.terraform/` | **Deferred** — no change. Still gated on WU-5 decision; cleanup hygiene PR can land independently any time. |
+| `03-aks-multicluster/terraform/main.tf` | **Deferred to WU-5.** No action. |
+| `docs/BLS-Platform-Operations-Guide.docx` | **Deferred** — surface to architect remains open. No action this PR. |
+| `docs/what-broke.md` | **Keep** — referenced from bridge document §5 (engineering discipline) and §7 (how to verify). No action needed; the cross-link Week 1 audit recommended is already in place. |
+| `scripts/wu-2/` | **Keep** — confirmed retained for reference. No action. |
+| `setup-claude-context.sh` (top level) | **Deferred** — low priority. No action. |
+| Top-level `README.md` rewrite | **Deferred to Week 3** — Week 2 expands the bridge document; the top-level README rewrite happens against the diagram-complete baseline. Tracked in Plan-v4 README §2. |
+| `projects/01-landing-zone/` layout inconsistency | **Deferred** — surface remains open. No action. |
+
+## Notes on what is **not** in the audit (Week 2 additions)
+
+- **`docs/diagrams/00-system-context.mmd`, `07-scope-boundary.mmd`** — Week 1 outputs, both current. The catalogue in `docs/diagrams/README.md` already names them and they are referenced from bridge document §1 and §6. No action.
+- **`BLS-PLATFORM-ENGINEERING-GUIDE.md`** — Section 4 placeholders are being filled in this PR (TASK 7). The architect-voice rows (`The decision that made this senior:`, `What I deliberately didn't build:`) remain explicitly blank with `[Architect fills in]` markers per the Week 1 design. Not obsolete; in flight.
+- **`docs/plan-v4/concept-tool-mapping.md`** — current. Will be extended in Week 3 per the documented Week 3 prompt; not touched this week.
+
+## Failure-mode flag (Week 2)
+
+The two new findings (`values.yaml:46`, Ansible CIDR) are both surfaced rather than actioned. Both deserve their own commit + ADR-or-runbook entry. Bundling either into this PR would conflate concerns — the WU-3 deletion is a deletion, the WU-9 rebuild is a rebuild, the override-1 IP scrub is a single-purpose 5-line fix. Operational config and Ansible defaults are a third category that the architect should sequence after this PR lands.

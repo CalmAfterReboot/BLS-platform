@@ -58,8 +58,8 @@ python3 -m pip install --user diagrams
 
 # Render a single diagram
 cd docs/diagrams/
-python3 02-k3s-cluster-topology.py
-# produces 02-k3s-cluster-topology.png in the same directory
+python3 03-k3s-ha-cluster.py
+# produces 03-k3s-ha-cluster.png in the same directory
 ```
 
 If a contributor edits a `.py` and pushes without rendering locally, the CI workflow renders and commits the `.png` on their behalf. If a contributor renders locally, the workflow detects no diff and exits cleanly.
@@ -71,15 +71,16 @@ The catalogue is the index. Every diagram below has a row; every row links to so
 | # | Source | Type | Caption | Supports |
 |---|---|---|---|---|
 | 00 | [`00-system-context.mmd`](./00-system-context.mmd) | Mermaid (C4-style) | System context diagram: the BLS Platform monorepo at the centre, with the four external actors (Engineer, Hiring Manager / Technical Lead, Recruiter, External Reviewer) on one axis and the three external systems (GitHub, Microsoft Azure, Proxmox Homelab, LLM Providers) on the other. Each edge names the interaction. | Bridge document §1 (the signal); [`BLS-PLATFORM-ENGINEERING-GUIDE.md`](../../BLS-PLATFORM-ENGINEERING-GUIDE.md) |
+| 01 | [`01-container-view.py`](./01-container-view.py) | Python topology (C4 L2) | Container-level view of the entire BLS platform. GitHub + Actions on the left; Azure landing zone (P1) and Proxmox homelab k3s cluster (P2 + P4 + P5) in the centre; external LLM providers on the right. Shows GitOps reconciliation, the CI image-push edge, Prometheus scrape edges, and the cross-cluster request path from FastAPI gateway through LiteLLM to Ollama / Azure OpenAI / DeepSeek. | Bridge document §4 (project-by-project landing page) |
+| 02 | [`02-landing-zone-topology.py`](./02-landing-zone-topology.py) | Python topology | P1 — Azure Landing Zone. Hub VNet `10.0.0.0/16` and Spoke VNet `10.1.0.0/16` peered bidirectionally; subnet-scoped NSGs; Log Analytics workspace receiving diagnostic logs from VNets and NSGs; Storage Account for remote Terraform state; Key Vault. | Bridge document §4 (P1) |
+| 03 | [`03-k3s-ha-cluster.py`](./03-k3s-ha-cluster.py) | Python topology | P2 — k3s HA cluster on Proxmox. Three control-plane nodes behind a kube-vip-managed VIP (placeholder `<vip-ip>`), embedded etcd quorum, two workers, ArgoCD running in-cluster, the Ansible `node-hardening` role rendered as a banner. VLAN identifiers placeheld per the private-network sanitisation rule. | Bridge document §4 (P2); ADR-002, ADR-003 |
+| 04 | [`04-multi-cluster-gitops.mmd`](./04-multi-cluster-gitops.mmd) | Mermaid sequence | P3 — multi-cluster GitOps reconciliation. Git push → ApplicationSet matrix generator expands `[clusters] × [workloads]` → ArgoCD reconciles each child Application to its target cluster (k3s in-cluster and `bls-aks-demo`) in parallel → health rolls back up to the UI. The closing note captures why `selfHeal=true` is load-bearing. | Bridge document §4 (P3); ADR-005 |
+| 05 | [`05-llm-gateway-request-path.mmd`](./05-llm-gateway-request-path.mmd) | Mermaid sequence | P4 — LLM gateway request path. Bearer auth at the FastAPI edge, LiteLLM router with cache-hit/cache-miss branch, backend selection (Ollama on the Proxmox host vs Azure OpenAI), response. The Prometheus `/metrics` scrape is rendered as a separate async edge — deliberately not part of the request path. | Bridge document §4 (P4); ADR-008 |
 | 07 | [`07-scope-boundary.mmd`](./07-scope-boundary.mmd) | Mermaid flowchart | Scope discipline: two columns side by side — what this portfolio claims (left) versus what it deliberately does not claim (right). Reads as a visual summary of bridge document §3 (portfolio at a glance) and §6 (deliberate non-claims). | Bridge document §6 (what this portfolio deliberately doesn't claim); Plan-v4 operating doc §5 |
 
-Future diagrams (planned, Plan-v4 Weeks 2–3):
+Future diagrams (planned, Plan-v4 Week 3):
 
 | # | Planned source | Type | Planned caption | Supports |
 |---|---|---|---|---|
-| 01 | `01-azure-landing-zone.py` | Python topology | Azure hub-spoke landing zone — RG, hub VNet with one NSG, spoke VNet with one NSG, Log Analytics workspace, peering edges. | Bridge document §4.1 |
-| 02 | `02-k3s-cluster-topology.py` | Python topology | k3s cluster on Proxmox — three control-plane nodes with kube-vip, two workers, etcd cluster, the Ansible-applied hardening layer rendered as a banner on each node. | Bridge document §4.2 |
-| 03 | `03-gitops-reconciliation.mmd` | Mermaid flowchart | GitOps reconciliation loop — push to Git, ArgoCD application controller pulls, matrix ApplicationSet expands to N×M Applications, sync to cluster, drift detected via reconciliation interval. | Bridge document §4.3; ADR-005 |
-| 04 | `04-llm-gateway-request-path.mmd` | Mermaid sequence | LLM gateway request path — client request, FastAPI route, LiteLLM provider selection, Redis cache hit/miss branch, response, `/metrics` observation. | Bridge document §4.4 |
-| 05 | `05-observability-scrape.py` | Python topology | Prometheus scrape graph — Prometheus instance in `monitoring`, ServiceMonitor selectors, scrape targets across `llm-gateway`, `argocd`, `sealed-secrets`, `kube-system` namespaces. | Bridge document §4.5; ADR-006 |
-| 06 | `06-sealed-secrets-backup.mmd` | Mermaid sequence | Sealed-secrets master-key backup procedure — kubectl export, off-workstation transfer, controller-restart test, throwaway round-trip verification. | [`sealed-secrets-controller.md`](../runbooks/sealed-secrets-controller.md) |
+| 06 | `06-observability-data-flow.{py,mmd}` | TBD (decide at authoring time) | P5 — observability data flow. Prometheus scraping ServiceMonitors across the llm-gateway, argocd, sealed-secrets, and kube-system namespaces; Alertmanager routing; Grafana dashboard reads. Tool choice deferred to when the diagram is authored under WU-6 in Week 3. | Bridge document §4 (P5); ADR-006 |
+| 08 | `08-sealed-secrets-backup.mmd` | Mermaid sequence | Sealed-secrets master-key backup procedure — kubectl export, off-workstation transfer, controller-restart test, throwaway round-trip verification. | [`sealed-secrets-controller.md`](../runbooks/sealed-secrets-controller.md) |

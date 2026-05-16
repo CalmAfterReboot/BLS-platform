@@ -1,0 +1,66 @@
+Pre-deletion baseline at branch HEAD
+Timestamp (UTC): 20260516T180035Z
+Commit: 20b24a6e611f864639f79fec6294360e42a47741
+
+=== matrix-app sync/health status ===
+Synced/Progressing
+
+=== ApplicationSet bls-workloads .status.conditions ===
+[
+  {
+    "lastTransitionTime": "2026-05-15T03:03:39Z",
+    "message": "All applications have been generated successfully",
+    "reason": "ApplicationSetUpToDate",
+    "status": "False",
+    "type": "ErrorOccurred"
+  },
+  {
+    "lastTransitionTime": "2026-05-15T03:03:39Z",
+    "message": "Successfully generated parameters for all Applications",
+    "reason": "ParametersGenerated",
+    "status": "True",
+    "type": "ParametersGenerated"
+  },
+  {
+    "lastTransitionTime": "2026-05-15T03:03:39Z",
+    "message": "All applications have been generated successfully",
+    "reason": "ApplicationSetUpToDate",
+    "status": "True",
+    "type": "ResourcesUpToDate"
+  }
+]
+
+=== ApplicationSet-generated child count (children of bls-workloads) ===
+6
+
+=== Names of the children (for cross-reference in Step 5) ===
+llm-gateway-bls-aks-demo
+llm-gateway-in-cluster
+monitoring-bls-aks-demo
+monitoring-in-cluster
+podinfo-bls-aks-demo
+podinfo-in-cluster
+
+=== Note on matrix-app health == "Progressing" ===
+
+The matrix-app reports sync=Synced, health=Progressing at baseline. This
+is benign: every Deployment has generation == observedGeneration and
+availableReplicas == readyReplicas == spec.replicas. All pods 1/1 Running
+for 6-7 days. Last sync operationState: phase=Succeeded at the WU-2 closure
+timestamp (2026-05-13T19:18:27Z).
+
+Why aggregate health is "Progressing" with all underlying resources healthy:
+ArgoCD's per-resource health rollup shows health=null for every resource in
+the status array. With no per-resource health computed, the aggregate
+defaults to Progressing. This is a known aggregator quirk, not a real
+unhealthy state.
+
+Step 5's gate "matrix-app still Synced/Healthy — same as before" is read
+as "same as before" here, since the baseline is Synced/Progressing.
+Equivalence at post-deletion is the gate; any drift toward OutOfSync,
+Degraded, or Unknown stops the verification.
+
+Deployment ready/available snapshot:
+  litellm:     replicas=1 available=1 ready=1 updated=1 gen/obsGen=2793/2793
+  llm-gateway: replicas=1 available=1 ready=1 updated=1 gen/obsGen=2778/2778
+  redis:       replicas=1 available=1 ready=1 updated=1 gen/obsGen=2768/2768
