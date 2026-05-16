@@ -1,6 +1,0 @@
-apiVersion: v2
-name: llm-gateway
-description: BLS LLM Gateway — FastAPI + LiteLLM + Redis
-type: application
-version: 0.1.0
-appVersion: "0.1.0"
