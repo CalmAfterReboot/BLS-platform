@@ -96,32 +96,69 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
 
 ## 4. Technical depth — per-project deep dives
 
-> **Week 1 placeholder section.** Sections 4.1 through 4.5 below contain the headings and the depth-anchor checklist the architect fills in across Plan-v4 Weeks 2 and 3. Each subsection lands a one-page technical write-up keyed to the matching diagram and ADR(s).
+> **Architect-fill section.** Each P1-P5 subsection below has its concept-and-tool framing and its reading-path links already populated (Plan-v4 Week 2). The two rows marked `[Architect fills in — see ADR-NNN, diagram NN]` are deliberately left for the architect's voice. Fill in 2-3 sentences in your own words: the decision that made this senior, and the trade-off you accepted. Do not let those rows be ghost-written; the rest of the document carries no first-person claim that those two rows do not earn.
 
-### 4.1 Azure landing zone — depth view
+### 4.1 Azure landing zone — depth view (P1)
 
-- *Network topology diagram reference:* [`docs/diagrams/01-azure-landing-zone.png`](docs/diagrams/) (to be rendered Week 2)
-- *Depth checklist:* hub-spoke peering layout, NSG rule rationale, Log Analytics ingestion scope, Azure Policy assignments, remote state backend hardening, cost ceiling enforcement.
+- **Architectural concept demonstrated:** Declarative state with reconciliation. Describe the desired Azure landing zone in code, let Terraform converge cloud reality to match.
+- **Tool implementing the concept:** Terraform (Azure provider) with remote state in an Azure Storage account.
+- **Where to read deeper:**
+  - Topology diagram: [`docs/diagrams/02-landing-zone-topology.py`](docs/diagrams/02-landing-zone-topology.py) (rendered to `.png` by CI)
+  - System-wide container view: [`docs/diagrams/01-container-view.py`](docs/diagrams/01-container-view.py)
+  - Concept-to-tool row: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (rows for *Declarative state with reconciliation*, *Tagging discipline + spend control*, *Remote Terraform state with locking*)
+  - Project README: [`projects/01-landing-zone/README.md`](projects/01-landing-zone/README.md)
+- **The decision that made this senior:** *[Architect fills in — name the load-bearing call. Candidates: hub-spoke over flat VNet at this scale, NSG strategy, the remote-state hardening posture, the tag-policy enforcement model. Pick one, 2-3 sentences.]*
+- **What I deliberately didn't build:** *[Architect fills in — name what was in scope and consciously cut. Candidates: Azure Firewall in front of the hub, Bastion, private endpoints across the data plane, Front Door. Pick one, 2-3 sentences with the trade-off accepted.]*
 
-### 4.2 k3s cluster — depth view
+### 4.2 k3s cluster — depth view (P2)
 
-- *Topology diagram reference:* [`docs/diagrams/02-k3s-cluster.png`](docs/diagrams/) (to be rendered Week 2)
-- *Depth checklist:* control-plane HA via kube-vip, etcd layout, Ansible role idempotency proof, hardening baseline coverage, recovery from etcd corruption, recovery from DNS-via-pfSense failure.
+- **Architectural concept demonstrated:** Container orchestration with high availability on commodity hardware, combined with configuration management as code for every node.
+- **Tool implementing the concept:** k3s with kube-vip for control-plane HA; Ansible `node-hardening` role applied to every node.
+- **Where to read deeper:**
+  - Cluster topology diagram: [`docs/diagrams/03-k3s-ha-cluster.py`](docs/diagrams/03-k3s-ha-cluster.py)
+  - ADRs: [`ADR-002 — homelab over cloud-only`](docs/adr/ADR-002-homelab-over-cloud-only.md), [`ADR-003 — Ansible over cloud-init`](docs/adr/ADR-003-ansible-over-cloud-init.md)
+  - Concept-to-tool rows: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*Container orchestration with HA on commodity hardware*, *Configuration management as code*, *Defence-in-depth on bootstrap nodes*)
+  - Ansible role: [`ansible/roles/node-hardening/`](ansible/roles/node-hardening/)
+- **The decision that made this senior:** *[Architect fills in — see ADR-002 and ADR-003. Candidates: HA via three CP nodes rather than single-CP "simpler" homelab, etcd-embedded over external, hardening as a re-runnable Ansible role rather than a one-shot bootstrap script. 2-3 sentences.]*
+- **What I deliberately didn't build:** *[Architect fills in — Candidates: managed AKS (would have shipped faster but lost the etcd-outward learning surface), Talos / k0s instead of k3s, GitOps-managed Ansible runs. 2-3 sentences with the trade-off accepted.]*
 
-### 4.3 Multi-cluster GitOps — depth view
+### 4.3 Multi-cluster GitOps — depth view (P3)
 
-- *Reconciliation flow diagram reference:* [`docs/diagrams/03-gitops-reconciliation.png`](docs/diagrams/) (to be rendered Week 2)
-- *Depth checklist:* matrix-generator semantics, Application generation behaviour on cluster registration, sync-policy uniformity, WU-2 forensic note as a worked example of GitOps incident response.
+- **Architectural concept demonstrated:** Declarative fleet management — one ApplicationSet manifest generates `N × M` Applications across clusters and workloads from a single spec.
+- **Tool implementing the concept:** ArgoCD ApplicationSet with the matrix generator (Git-directory × cluster-list).
+- **Where to read deeper:**
+  - Reconciliation flow diagram: [`docs/diagrams/04-multi-cluster-gitops.mmd`](docs/diagrams/04-multi-cluster-gitops.mmd)
+  - ADR: [`ADR-005 — ApplicationSet matrix pattern`](docs/adr/ADR-005-applicationset-matrix-pattern.md)
+  - Concept-to-tool rows: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*GitOps as the deployment boundary*, *Declarative fleet management*)
+  - Project README: [`03-aks-multicluster/README.md`](03-aks-multicluster/README.md)
+  - Forensic case study: PHASE-2-HANDOFF.md WU-2 (local-only) — worked example of GitOps incident response.
+- **The decision that made this senior:** *[Architect fills in — see ADR-005, diagram 04. Candidates: matrix generator over list/Git alone (the N×M scaling argument), uniform sync policy across child apps, `selfHeal=true` despite the operational implications. 2-3 sentences.]*
+- **What I deliberately didn't build:** *[Architect fills in — Candidates: Flux (different CRD layout for the same model), ArgoCD ApplicationSet plugin generators, app-of-apps over ApplicationSet. 2-3 sentences with the trade-off.]*
 
-### 4.4 LLM gateway — depth view
+### 4.4 LLM gateway — depth view (P4)
 
-- *Request-path diagram reference:* [`docs/diagrams/04-llm-gateway-request-path.png`](docs/diagrams/) (to be rendered Week 3)
-- *Depth checklist:* FastAPI dependency injection, LiteLLM provider abstraction, Redis cache hit/miss path, `/metrics` instrumentation, ServiceMonitor wiring, image build pipeline.
+- **Architectural concept demonstrated:** API gateway pattern for backend abstraction — a single OpenAI-compatible endpoint normalises calls across heterogeneous LLM providers (Ollama on Proxmox, Azure OpenAI, DeepSeek).
+- **Tool implementing the concept:** FastAPI at the edge (auth, request validation) in front of LiteLLM in proxy mode (provider routing, retries, cache) in front of the backends. Redis for exact-match response caching.
+- **Where to read deeper:**
+  - Request-path diagram: [`docs/diagrams/05-llm-gateway-request-path.mmd`](docs/diagrams/05-llm-gateway-request-path.mmd)
+  - ADR: [`ADR-008 — LLM gateway design`](docs/adr/ADR-008-llm-gateway-design.md) *(stub — architect to complete the Rationale and second-order Consequences sections)*
+  - Concept-to-tool row: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*API gateway pattern for backend abstraction*)
+  - Project README: [`k8s/workloads/llm-gateway/README.md`](k8s/workloads/llm-gateway/README.md) — operator-facing runbook including the six-item "things to know" operational history.
+- **The decision that made this senior:** *[Architect fills in — see ADR-008, diagram 05. Candidates: auth at the FastAPI edge rather than in LiteLLM (decoupling from LiteLLM's spend-tracking DB model), Ollama on the Proxmox host rather than in k3s (escaping container memory ceilings), three separate Deployments rather than one (independent lifecycles). 2-3 sentences.]*
+- **What I deliberately didn't build:** *[Architect fills in — Candidates: LiteLLM as the public edge (rejected — couples auth to routing layer), semantic caching (Redis is wired but semantic caching needs an embeddings model), streaming responses, request-shape rate limiting. 2-3 sentences.]*
 
-### 4.5 Observability + security — depth view
+### 4.5 Observability + security — depth view (P5)
 
-- *Scrape graph diagram reference:* [`docs/diagrams/05-observability-scrape.png`](docs/diagrams/) (to be rendered Week 3)
-- *Depth checklist:* multi-source Application anatomy, ServerSideApply rationale, sealed-secrets key lifecycle including rotation, runbook test coverage gaps named explicitly.
+- **Architectural concept demonstrated:** Pull-based metrics with label-based aggregation, plus encrypted secrets in Git decrypted only in-cluster.
+- **Tool implementing the concept:** Prometheus (via kube-prometheus-stack) for metrics; Sealed Secrets (Bitnami) for secret material at rest in Git. Multi-source ArgoCD Applications pin chart versions independently from values.
+- **Where to read deeper:**
+  - Observability data-flow diagram: *to be authored under WU-6 in Week 3* — slot reserved at [`docs/diagrams/`](docs/diagrams/) #06 (see catalogue).
+  - ADR: [`ADR-006 — observability GitOps`](docs/adr/ADR-006-observability-gitops.md)
+  - Concept-to-tool rows: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*Pull-based metrics*, *Encrypted secrets in Git*, *Multi-source ArgoCD Application*)
+  - Runbook: [`docs/runbooks/sealed-secrets-controller.md`](docs/runbooks/sealed-secrets-controller.md)
+  - Project directory: [`05-observability-security/`](05-observability-security/) (P5 README under WU-6, Week 3)
+- **The decision that made this senior:** *[Architect fills in — see ADR-006. Candidates: ServerSideApply=true for kube-prometheus-stack (the CRD-size argument), Sealed Secrets over SOPS / External Secrets Operator (the credential-distribution argument), multi-source Application pattern over umbrella chart. 2-3 sentences.]*
+- **What I deliberately didn't build:** *[Architect fills in — Candidates: Loki / centralised log aggregation, Tempo / distributed tracing, NetworkPolicy enforcement across every namespace (only the load-bearing ones today), externalised Grafana state. 2-3 sentences with the trade-off.]*
 
 ---
 
