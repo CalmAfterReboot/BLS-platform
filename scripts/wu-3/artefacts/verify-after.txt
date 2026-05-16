@@ -1,0 +1,27 @@
+WU-3 Step 5 — post-deletion verification gate
+Captured: 2026-05-16 (post-deletion, branch feat/plan-v4-week-2-diagrams-and-wu3)
+
+Gate run after commit e6a00e1 (git rm -r 04-llm-gateway/).
+ArgoCD reconciles from main; the deletion is on an unmerged feature
+branch, so no cluster-state change was expected. Gate confirms.
+
+[1] matrix-app llm-gateway-in-cluster sync/health:
+    Synced/Progressing
+    (matches baseline-before.txt; Progressing is the benign aggregate
+    documented in the e6a00e1 commit body — all 3 Deployments
+    observedGeneration==generation, pods 1/1 Running)
+
+[2] ApplicationSet bls-workloads .status.conditions:
+    ErrorOccurred=False       reason=ApplicationSetUpToDate
+    ParametersGenerated=True  reason=ParametersGenerated
+    ResourcesUpToDate=True    reason=ApplicationSetUpToDate
+    (matches baseline-before.txt — no ErrorOccurred)
+
+[3] ApplicationSet-generated child count: 6
+    (3 in-cluster + 3 *-bls-aks-demo — matches baseline-before.txt)
+
+[4] No generator errors in ApplicationSet conditions (see [2]).
+
+[5] No drift on any of the four checks vs baseline.
+
+RESULT: GREEN. Deletion verified safe. WU-3 procedure complete.
