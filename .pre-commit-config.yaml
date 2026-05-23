@@ -15,7 +15,22 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
-        exclude: .secrets.baseline
+        exclude: |
+          (?x)^(
+            \.secrets\.baseline|
+            k8s/workloads/llm-gateway/docs/verification/.*
+          )$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        name: ruff (llm-gateway tests)
+        args: ['--fix']
+        files: '^k8s/workloads/llm-gateway/tests/.*\.py$'
+      - id: ruff-format
+        name: ruff-format (llm-gateway tests)
+        files: '^k8s/workloads/llm-gateway/tests/.*\.py$'
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.92.0
