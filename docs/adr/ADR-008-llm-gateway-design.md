@@ -1,13 +1,6 @@
 # ADR-008: LLM Gateway design — API gateway pattern over a routed-provider fleet
-**Date:** 2026-05-16
-**Status:** Stub — Architect to complete
-
-> Stub ADR. The README under `k8s/workloads/llm-gateway/README.md`
-> already records the four load-bearing decisions in tabular form;
-> this ADR exists so each decision has a permanent home written in
-> the architect's voice. Sections marked `[Architect fills in]` need
-> the architect's narrative — 2-4 paragraphs each — before this ADR
-> moves from **Stub** to **Accepted**.
+**Date:** 2026-05-16 (drafted) · 2026-05-24 (accepted)
+**Status:** Accepted
 
 ## Context
 
@@ -48,12 +41,44 @@ Adopt the **API gateway pattern with a routed provider fleet**:
 
 ## Rationale
 
-[Architect fills in — 2-4 paragraphs covering why the API gateway
-pattern was chosen over alternatives like direct LiteLLM-as-edge or a
-service-mesh-based abstraction. Make explicit the trade-off accepted:
-two hops instead of one for any homelab call, in exchange for a clean
-auth boundary at the public layer and the ability to swap LiteLLM out
-without rewriting auth.]
+The API gateway pattern was chosen over its two leading alternatives
+— LiteLLM serving directly at the edge, and a service-mesh-based
+abstraction layered over LiteLLM — because each alternative made a
+different security or operational boundary worse without earning a
+meaningful gain at this scale.
+
+LiteLLM-as-edge would have shaved one network hop off every request
+but at the cost of coupling caller authentication to LiteLLM's
+spend-tracking model, which assumes a PostgreSQL database for budgets
+and audit. Bringing PostgreSQL onto this platform purely to satisfy
+an authentication boundary would have introduced a stateful failure
+domain to a stack designed to be stateless at the edge. The FastAPI
+layer makes the authentication surface a fifteen-line middleware in
+a file that can be diffed in a code review, with no database
+dependency, no spend-tracking lifecycle to manage, and no upgrade
+path that risks the auth contract.
+
+A service-mesh option (Istio sidecar, Linkerd) would have moved
+mTLS, retries, and routing-policy enforcement to the mesh and
+reduced the gateway's responsibilities to request shaping. Rejected
+on two grounds: the mesh's authentication primitives do not match
+the simple Bearer-token model this gateway uses without bolting an
+external auth provider in front (mesh auth assumes mTLS on top of
+mTLS, which means another set of certificates to rotate); and a
+mesh's operational footprint is non-trivial — the second-order
+debugging surface (envoy access logs, sidecar configmaps, per-pod
+injector annotations) would have outweighed any benefit at this
+single-cluster, single-workload scale.
+
+The accepted trade-off is two in-cluster hops per request (caller →
+FastAPI → LiteLLM → backend) in exchange for: a single file that
+owns authentication; a routing layer (LiteLLM) that can be swapped
+for a different multi-provider router without touching auth; and the
+ability to add semantic caching, request-shape rate limiting, or
+response post-processing as future FastAPI middleware without
+changing the routing contract callers depend on. The latency cost is
+~5–10 ms of in-cluster networking overhead per request — well under
+the inherent backend latency on any real model call.
 
 ## Alternatives considered
 
@@ -72,34 +97,101 @@ without rewriting auth.]
    different mechanisms (CI image build, upstream tag bump, dependency
    pin) and should not restart together.
 
-[Architect fills in — any alternatives the architect considered and
-discarded that aren't in this list; record them so the ADR captures
-the full decision space.]
+5. **Native cloud-provider AI gateway (Azure API Management with
+   policy expressions).** Rejected — the portfolio runs primarily on
+   the homelab k3s cluster, and an Azure-bound managed gateway would
+   have made the AKS path the privileged path while leaving the
+   homelab path on a custom stack. Symmetry across deployment targets
+   is itself a portfolio claim worth preserving; tying half the
+   routing logic to a managed Azure service breaks it.
+
+6. **Single-process Python service combining auth + routing.**
+   Rejected — this would have inlined LiteLLM as a library inside
+   the FastAPI process, removing the proxy hop and the second
+   container. But LiteLLM's release cadence is faster than this
+   gateway's, and treating LiteLLM as a separately-versioned service
+   (proxy mode) lets it be upgraded by bumping one image tag in
+   `values.yaml` without rebuilding the gateway image or restarting
+   the auth layer. The lifecycle independence is worth the second
+   container.
+
+7. **Plaintext Secret manifest indefinitely.** Considered as a
+   permanent state; rejected. The bootstrap `secret.yaml` shipped
+   placeholder plaintext keys at v0.4.0 as an explicit time-limited
+   gap. WU-4 closed that gap on 2026-05-24 by replacing the manifest
+   with a `--scope=strict` Bitnami `SealedSecret` that also seals the
+   Ollama endpoint address (previously a plaintext value in
+   `values.yaml`). No homelab-internal address or credential is
+   committed in plaintext now.
 
 ## Consequences
 
 **Accepted costs:**
 - Two hops for every request (FastAPI → LiteLLM → backend). Latency
-  budget includes ~5-10ms of in-cluster networking overhead.
-- LiteLLM memory footprint required iterative right-sizing (now 2Gi
-  limit / 512Mi request) — captured in the README's "things to know"
-  section.
-- The bootstrap `secret.yaml` ships plaintext placeholder keys
-  pending Sealed Secrets (WU-4). Explicitly time-limited.
+  budget includes ~5–10 ms of in-cluster networking overhead.
+- LiteLLM memory footprint required iterative right-sizing (now 2 Gi
+  limit / 512 Mi request) — captured in the README's "things to know"
+  section. Not yet profiled under sustained representative traffic.
+- Three Deployments to manage instead of one (gateway, LiteLLM,
+  Redis); lifecycle independence paid for in operational footprint
+  (three sets of probes, three rolling-update windows).
 
 **Capabilities gained:**
 - Single OpenAI-compatible endpoint covering local + cloud backends.
 - LiteLLM can be replaced (or upgraded across breaking versions) by
   changing one image tag in `values.yaml` — no FastAPI code change.
 - Auth boundary at the public edge makes the security model
-  inspectable in one file (`app/middleware/auth.py`).
+  inspectable in one file (`app/middleware/auth.py`); 401/403 are
+  returned as typed JSON envelopes (post the auth-middleware fix on
+  2026-05-24 that converted the misplaced `HTTPException` raises
+  from `BaseHTTPMiddleware` to direct `JSONResponse` returns).
 - Redis cache is wired in from day one; semantic caching is now a
   configuration change, not a topology change.
+- Runtime credentials (Bearer API keys, LiteLLM master key, Ollama
+  endpoint) are committed encrypted as a `SealedSecret` and unsealed
+  in-cluster — no plaintext credential or homelab-internal address
+  is committed to git as of WU-4 closure (2026-05-24).
+- An opt-in pytest live verification suite exercises the real OpenAI
+  path through the LiteLLM SDK — the same library the deployed proxy
+  runs — and commits sanitised JSON evidence to
+  `docs/verification/`. The gateway's behaviour against a real
+  upstream is documented as fact, not assertion.
 
-[Architect fills in — the second-order consequences the architect
-sees that aren't yet observable: lock-in risks, what this rules out
-later, how this would have to be re-thought if the model count grew
-10x.]
+**Second-order consequences:**
+
+- **Lock-in to LiteLLM's provider abstraction.** Any provider
+  LiteLLM does not support cannot be routed through this gateway
+  without a custom adapter. Mitigated by LiteLLM's breadth (100+
+  providers as of writing) and by the gateway's clean separation:
+  a custom adapter would live as a separately-versioned router
+  pod, not as code inside the FastAPI process.
+
+- **This design rules out a true edge service mesh.** If a future
+  iteration of this platform needs mesh-level capabilities (mTLS
+  between every workload, automatic retry budgets, traffic-shifted
+  canaries), the FastAPI layer is in the way of mesh injection.
+  The most likely re-architecture would push FastAPI's auth into a
+  Gateway API resource handled by the mesh ingress and reduce
+  LiteLLM to a pure routing pod behind it. Non-trivial migration;
+  flagging here is sufficient until the mesh need is real.
+
+- **Scale ceiling: this design assumes single-host Ollama remains
+  the homelab primary.** If model count grew 10× and required a
+  fleet of Ollama hosts, the `routing_strategy: least-busy` setting
+  would not by itself produce sensible behaviour across
+  heterogeneous hosts — a slow host's least-busy slot is still
+  slower than a fast host's busy slot. The re-architecture path
+  is documented in the Review trigger section: introduce per-host
+  LiteLLM config blocks with capacity weights, or move to a
+  queue-based dispatcher.
+
+- **SDK-vs-proxy version drift is a known live-verification risk.**
+  The proxy image is pinned to `main-latest`; the SDK is pinned to
+  `>=1.40,<2.0` in `requirements-dev.txt`. The verification suite
+  tests the library path; behaviour drift between SDK and proxy
+  would not be caught by the suite. Mitigated by pinning the proxy
+  to a specific tag the day any production traffic depends on
+  specific Router semantics.
 
 ## Review trigger
 
@@ -112,5 +204,15 @@ Revisit this ADR when any of the following becomes true:
   (would move auth off FastAPI middleware).
 - LiteLLM gains a no-database auth mode that meets the same
   guarantees (would let the gateway layer collapse into LiteLLM).
-- Sealed Secrets is bypassed by a managed-secrets integration
-  (would change the WU-4 follow-up path).
+- Sealed Secrets is superseded by a managed-secrets integration
+  (Azure Key Vault + CSI driver, External Secrets Operator) — would
+  change the credential-injection path for the gateway and require
+  per-cluster secret-source decisions ahead of any AKS rebuild.
+- The live verification suite begins reporting persistent drift
+  between the LiteLLM SDK path and the deployed proxy — would
+  indicate the `main-latest` pin has diverged enough that the
+  SDK-tested behaviour no longer represents deployed behaviour, and
+  the proxy should be pinned to a specific tag.
+- A second Ollama host (or any heterogeneous backend topology) is
+  added on the homelab side — would invalidate the single-host
+  `least-busy` reasoning and force a routing-strategy revisit.
