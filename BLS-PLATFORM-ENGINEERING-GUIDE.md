@@ -1,6 +1,6 @@
 # Blue Layer Systems — Platform Engineering Guide
 
-> Bridge document. Translates the engineering work in this monorepo into language a hiring manager, a technical lead, or a recruiter scoping a £75–85k UK platform engineer role can verify in under ten minutes.
+> Bridge document. Translates the engineering work in this monorepo into language a hiring manager, a technical lead, or a recruiter scoping a UK platform engineer role can verify in under ten minutes.
 >
 > Concept-first, tool-second throughout. Every tool named here is justified by the concept it implements; the depth of that justification lives in the ADRs and runbooks linked from each section.
 
