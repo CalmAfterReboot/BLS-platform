@@ -1,0 +1,34 @@
+# Copy to terraform.tfvars and fill in for your environment. The
+# terraform.tfvars file is gitignored at the repo root, so real values
+# (including IPs, tokens, passwords, SSH keys) never reach git.
+#
+# Apply with: terraform init -backend-config=backend.tfbackend && terraform apply
+
+# Proxmox API
+proxmox_api_endpoint = "https://<proxmox-host>:8006/api2/json"
+proxmox_api_token    = "<terraform-user@pam>!<token-id>=<token-secret>"
+proxmox_node         = "<proxmox-node-name>"
+
+# Proxmox SSH (used by the bpg/proxmox provider for VM cloning and qemu-guest-agent)
+proxmox_ssh_user     = "root"
+proxmox_ssh_password = "<proxmox-ssh-password>"
+
+# Cloud-init SSH public key for the ansible user
+ssh_public_key = "ssh-ed25519 <pubkey-body> ansible"
+
+# Network — fill in for your homelab subnet/VLAN
+vlan_tag    = <vlan-id>
+gateway     = "<homelab-subnet>.1"
+dns_servers = ["<homelab-subnet>.1", "1.1.1.1"]
+
+# Per-node IPs (used by locals.tf to build the control_plane_nodes / worker_nodes maps)
+control_plane_node_ips = {
+  "k3s-control-01" = "<homelab-subnet>.10"
+  "k3s-control-02" = "<homelab-subnet>.11"
+  "k3s-control-03" = "<homelab-subnet>.12"
+}
+
+worker_node_ips = {
+  "k3s-worker-01" = "<homelab-subnet>.20"
+  "k3s-worker-02" = "<homelab-subnet>.21"
+}

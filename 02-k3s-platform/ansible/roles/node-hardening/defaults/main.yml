@@ -57,7 +57,11 @@ limits_settings:
   - { domain: "*", limit_type: "soft", limit_item: "nproc", value: "65536" }
   - { domain: "*", limit_type: "hard", limit_item: "nproc", value: "65536" }
 
-fail2ban_ignoreip: "127.0.0.1/8 192.168.200.0/24 10.212.46.0/24"
+## fail2ban CIDR allowlist.
+## Default is loopback only. Override in `group_vars/all.local.yml`
+## (gitignored) with the trusted subnets for your environment, e.g.:
+##   fail2ban_ignoreip: "127.0.0.1/8 <homelab-subnet-cidr> <ollama-host-subnet-cidr>"
+fail2ban_ignoreip: "127.0.0.1/8"
 
 auditd_rules_dir: "/etc/audit/rules.d"
 

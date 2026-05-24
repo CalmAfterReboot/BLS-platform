@@ -1,0 +1,11 @@
+# Copy to `hosts.yml` and fill in real values for your environment.
+# `hosts.yml` is gitignored at the repo root — real IPs never reach git.
+---
+all:
+  children:
+    nodes:
+      hosts:
+        bls-node-01:
+          ansible_host: <homelab-subnet>.50
+          ansible_connection: local
+          ansible_user: dev

@@ -36,3 +36,17 @@ docs/plan-v4/orchestration-prompts.md
 
 # Downloaded artefacts from Claude sessions — local only
 files/
+
+# Operator-private operational state — never commit.
+# Real Ansible inventory IPs live here; ship `hosts.example.yml` instead.
+**/inventory/hosts.yml
+
+# Terraform partial backend config — real storage account name lives in
+# *.tfbackend; ship *.tfbackend.example. Init with:
+#   terraform init -backend-config=backend.tfbackend
+*.tfbackend
+
+# Operator-private operator handbook (paths to creds, rotation procedures,
+# private URLs). Reference-only — no literal secrets are stored here, but
+# the file inventories where every credential lives, so it stays out of git.
+OPERATOR-PRIVATE.md

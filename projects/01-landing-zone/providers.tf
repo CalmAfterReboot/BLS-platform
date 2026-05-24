@@ -10,12 +10,11 @@ terraform {
     }
   }
 
-  backend "azurerm" {
-    resource_group_name  = "rg-bls-tfstate"                       # The Azure resource group where the storage account resides
-    storage_account_name = "stblstfstate001"                      # The name of the Azure storage account for storing Terraform state
-    container_name       = "tfstate"                              # The name of the blob container within the storage account
-    key                  = "projects/01-landing-zone/dev.tfstate" # The path/key for the Terraform state file in the container
-  }
+  # Partial backend — actual storage account and container live in
+  # `backend.tfbackend` (gitignored). Initialise with:
+  #   terraform init -backend-config=backend.tfbackend
+  # See `backend.tfbackend.example` for the expected shape.
+  backend "azurerm" {}
 }
 
 provider "azurerm" {

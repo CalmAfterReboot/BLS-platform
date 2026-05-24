@@ -8,10 +8,9 @@ terraform {
     }
   }
 
-  backend "azurerm" {
-    resource_group_name  = "rg-bls-tfstate"
-    storage_account_name = "stblstfstate001"
-    container_name       = "tfstate"
-    key                  = "k3s-proxmox.tfstate"
-  }
+  # Partial backend — actual storage account and container live in
+  # `backend.tfbackend` (gitignored). Initialise with:
+  #   terraform init -backend-config=backend.tfbackend
+  # See `backend.tfbackend.example` for the expected shape.
+  backend "azurerm" {}
 }
