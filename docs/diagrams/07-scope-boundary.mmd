@@ -13,6 +13,10 @@ flowchart LR
         I4["LLM gateway + live OpenAI evidence"]:::inscope
         I5["Prometheus + Sealed Secrets"]:::inscope
         I6["NetworkPolicy (llm-gateway)"]:::inscope
+        %% Invisible edges force vertical stacking within the subgraph;
+        %% without them Mermaid lays the boxes out horizontally because
+        %% the outer flowchart is LR and the subgraph has no real edges.
+        I1 ~~~ I2 ~~~ I3 ~~~ I4 ~~~ I5 ~~~ I6
     end
 
     subgraph OUT["OUT OF SCOPE"]
@@ -22,6 +26,7 @@ flowchart LR
         O3["Platform team of N"]:::outscope
         O4["AKS currently running"]:::outscope
         O5["24/7 SRE on-call"]:::outscope
+        O1 ~~~ O2 ~~~ O3 ~~~ O4 ~~~ O5
     end
 
     IN ~~~ OUT
