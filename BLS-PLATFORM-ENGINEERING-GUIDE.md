@@ -152,13 +152,13 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
 - **Architectural concept demonstrated:** Pull-based metrics with label-based aggregation, plus encrypted secrets in Git decrypted only in-cluster.
 - **Tool implementing the concept:** Prometheus (via kube-prometheus-stack) for metrics; Sealed Secrets (Bitnami) for secret material at rest in Git. Multi-source ArgoCD Applications pin chart versions independently from values.
 - **Where to read deeper:**
-  - Observability data-flow diagram: *to be authored under WU-6 in Week 3* — slot reserved at [`docs/diagrams/`](docs/diagrams/) #06 (see catalogue).
-  - ADR: [`ADR-006 — observability GitOps`](docs/adr/ADR-006-observability-gitops.md)
+  - Observability data-flow diagram: [`docs/diagrams/06-observability-data-flow.py`](docs/diagrams/06-observability-data-flow.py) (renders to [`06-observability-data-flow.png`](docs/diagrams/06-observability-data-flow.png))
+  - ADRs: [`ADR-006 — observability GitOps`](docs/adr/ADR-006-observability-gitops.md), [`ADR-009 — NetworkPolicy scope`](docs/adr/ADR-009-networkpolicy-scope.md)
   - Concept-to-tool rows: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*Pull-based metrics*, *Encrypted secrets in Git*, *Multi-source ArgoCD Application*)
   - Runbook: [`docs/runbooks/sealed-secrets-controller.md`](docs/runbooks/sealed-secrets-controller.md)
-  - Project directory: [`05-observability-security/`](05-observability-security/) (P5 README under WU-6, Week 3)
-- **Load-bearing decision:** *[Architect fills in — see ADR-006. Candidates: ServerSideApply=true for kube-prometheus-stack (the CRD-size argument), Sealed Secrets over SOPS / External Secrets Operator (the credential-distribution argument), multi-source Application pattern over umbrella chart. 2-3 sentences.]*
-- **What I deliberately didn't build:** *[Architect fills in — Candidates: Loki / centralised log aggregation, Tempo / distributed tracing, NetworkPolicy enforcement across every namespace (only the load-bearing ones today), externalised Grafana state. 2-3 sentences with the trade-off.]*
+  - Project README: [`05-observability-security/README.md`](05-observability-security/README.md)
+- **Load-bearing decision:** Multi-source ArgoCD Application over an umbrella Helm chart wrapping `kube-prometheus-stack`. Pinning chart version and values in separate sources means a chart upgrade is a one-line diff in `monitoring.yaml` and a values change is a separately-reviewable file edit — neither requires touching the other, neither commits a binary tarball to Git. The trade-off accepted is a hard floor of ArgoCD 2.6 for multi-source support and an explicit `ServerSideApply=true` to clear the 262144-byte CRD annotation limit kube-prometheus-stack triggers on every install.
+- **What I deliberately didn't build:** Centralised log aggregation (Loki). The homelab cluster has no high-availability persistent storage beyond what kube-prometheus-stack itself consumes; a real Loki deployment with retention policy and ingester replication would double the cluster's stateful-storage footprint for a use case the portfolio does not exercise. The metrics side ships with kube-prometheus-stack because every workload already emits Prometheus metrics; the logs side does not, because no workload here has more than a handful of pods to tail.
 
 ---
 
