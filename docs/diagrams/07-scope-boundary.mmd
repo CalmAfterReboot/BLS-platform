@@ -1,19 +1,18 @@
 %%{init: {'theme':'neutral','flowchart':{'curve':'basis'}}}%%
 flowchart LR
     %% Scope discipline — left: what this portfolio claims; right: what
-    %% it deliberately does not claim. Labels stay short; detail lives in
-    %% the catalogue caption and in bridge-doc §6.
+    %% it deliberately does not claim. Labels stay short and uniform —
+    %% one per project for IN, one per non-claim for OUT. Detail lives
+    %% in the catalogue caption and in bridge-doc §6.
 
     subgraph IN["IN SCOPE"]
         direction TB
-        I1["Hub-spoke Azure landing zone"]:::inscope
+        I1["Azure landing zone<br/>(Terraform)"]:::inscope
         I2["HA k3s on Proxmox"]:::inscope
         I3["Matrix ApplicationSet GitOps"]:::inscope
-        I4["LLM gateway (live) — SealedSecret-backed"]:::inscope
+        I4["LLM gateway + live OpenAI evidence"]:::inscope
         I5["Prometheus + Sealed Secrets"]:::inscope
-        I6["NetworkPolicy on llm-gateway namespace (ADR-009)"]:::inscope
-        I7["Live OpenAI verification + committed evidence"]:::inscope
-        I8["ADRs, runbooks, release tags"]:::inscope
+        I6["NetworkPolicy (llm-gateway)"]:::inscope
     end
 
     subgraph OUT["OUT OF SCOPE"]
@@ -22,8 +21,7 @@ flowchart LR
         O2["AWS / GCP production depth"]:::outscope
         O3["Platform team of N"]:::outscope
         O4["AKS currently running"]:::outscope
-        O5["Every WU closed"]:::outscope
-        O6["24/7 SRE on-call"]:::outscope
+        O5["24/7 SRE on-call"]:::outscope
     end
 
     IN ~~~ OUT
@@ -35,22 +33,20 @@ flowchart LR
     style OUT fill:#fafafa,stroke:#9ca3af,stroke-width:2px,stroke-dasharray: 4 3;
 
 %% Caption — supports BLS-PLATFORM-ENGINEERING-GUIDE.md §6 and Plan-v4
-%% operating doc §5. Two columns. Left: what the portfolio has built and
-%% is willing to be tested on — Terraform-built hub-spoke landing zone
-%% (with remote state + locking), HA k3s on Proxmox (with the Ansible
-%% node-hardening role), matrix-ApplicationSet GitOps reconciling N×M
-%% Applications, the FastAPI/LiteLLM LLM gateway running with /metrics
-%% exposed, kube-prometheus-stack and Sealed Secrets (runbook, restart
-%% test, key backup), NetworkPolicy enforcement on the llm-gateway
-%% namespace (default-deny baseline + per-pod allows, scope decision
-%% recorded in ADR-009 — monitoring and sealed-secrets explicitly
-%% deferred with reasoning), six ADRs, two runbooks, five release tags,
-%% and incident response documented. Right: deliberate non-claims — no
-%% multi-tenant production workload, no AWS/GCP production depth
-%% inside this repo (GCP is on the P6 roadmap, not built), no
-%% platform-team-of-N coordination (one-architect portfolio), AKS is
-%% torn down for cost discipline (rebuild tracked as WU-5), open WUs
-%% remain (5, 6, 8, 9 — tracked and honest), and no formal 24/7 SRE
-%% on-call (that's MSP context, not this repo). Scope discipline is a
-%% hiring signal — a portfolio that pretends every loose end is tied
-%% is a portfolio that cannot be trusted on the tied ones.
+%% operating doc §5. Two columns, six rows in / five rows out. One row
+%% per project for IN (Azure landing zone, k3s on Proxmox, matrix
+%% ApplicationSet GitOps, the LLM gateway with its committed live
+%% OpenAI verification evidence, kube-prometheus-stack with Sealed
+%% Secrets, and NetworkPolicy enforcement on the llm-gateway namespace
+%% per ADR-009). One row per non-claim for OUT (no multi-tenant
+%% production workload, no AWS/GCP production depth inside this repo,
+%% no platform-team-of-N coordination, no live AKS — torn down for cost
+%% discipline and rebuild tracked as WU-5, no formal 24/7 SRE on-call).
+%% Labels stay 3-5 words so the visual rhythm holds; parentheticals
+%% like (ADR-NNN), (WU-N), and (live) deliberately do not appear in
+%% the node text — they belong in this caption and in the supporting
+%% documents, not in the diagram. The dropped rows from the prior
+%% version (ADRs/runbooks/release-tags, "every WU closed") were process
+%% commentary, not project scope. Scope discipline is a hiring signal
+%% — a portfolio that pretends every loose end is tied is a portfolio
+%% that cannot be trusted on the tied ones.
