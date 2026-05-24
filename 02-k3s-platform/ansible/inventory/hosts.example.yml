@@ -1,0 +1,27 @@
+# Copy to `hosts.yml` and fill in real values for your environment.
+# `hosts.yml` is gitignored at the repo root — real IPs never reach git.
+#
+# Required: ansible_host (the routable IP for each node) and the connection
+# credentials referenced by the role (ansible_user, ansible_ssh_private_key_file).
+---
+all:
+  children:
+    k3s_cluster:
+      children:
+        k3s_control:
+          hosts:
+            k3s-control-01:
+              ansible_host: <homelab-subnet>.10
+            k3s-control-02:
+              ansible_host: <homelab-subnet>.11
+            k3s-control-03:
+              ansible_host: <homelab-subnet>.12
+        k3s_worker:
+          hosts:
+            k3s-worker-01:
+              ansible_host: <homelab-subnet>.20
+            k3s-worker-02:
+              ansible_host: <homelab-subnet>.21
+  vars:
+    ansible_user: ansible
+    ansible_ssh_private_key_file: ~/.ssh/bls_ansible_ed25519

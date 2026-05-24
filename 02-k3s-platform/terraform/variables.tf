@@ -46,21 +46,28 @@ variable "network_bridge" {
 }
 
 variable "vlan_tag" {
-  description = "VLAN tag for VM network interfaces"
+  description = "VLAN tag for VM network interfaces. Provide via terraform.tfvars (gitignored)."
   type        = number
-  default     = 200
 }
 
 variable "gateway" {
-  description = "Default gateway for VMs"
+  description = "Default gateway for VMs. Provide via terraform.tfvars (gitignored)."
   type        = string
-  default     = "192.168.200.1"
 }
 
 variable "dns_servers" {
-  description = "DNS servers for VMs"
+  description = "DNS servers for VMs. Provide via terraform.tfvars (gitignored)."
   type        = list(string)
-  default     = ["192.168.200.1", "1.1.1.1"]
+}
+
+variable "control_plane_node_ips" {
+  description = "Map of control-plane hostname to IP address (e.g. {\"k3s-control-01\" = \"<homelab-subnet>.10\"}). Provide via terraform.tfvars (gitignored)."
+  type        = map(string)
+}
+
+variable "worker_node_ips" {
+  description = "Map of worker hostname to IP address (e.g. {\"k3s-worker-01\" = \"<homelab-subnet>.20\"}). Provide via terraform.tfvars (gitignored)."
+  type        = map(string)
 }
 
 variable "cloud_init_user" {
