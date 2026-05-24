@@ -159,7 +159,63 @@ artefacts (signed tokens, cached sessions) the leak could have
 produced. Then update this handbook to reflect the new rotation
 date.
 
+## Backup of the operator-private handbook
+
+The filled-in handbook is gitignored, so it lives in plaintext
+on the operator's workstation only. Disk loss (lost laptop,
+failed drive, reformat, malware ransom) destroys the index.
+
+The standard backup pattern is a GPG-symmetric-encrypted copy of
+the handbook, stored anywhere the operator wants — USB key,
+cloud backup, private Gist. The encrypted blob is opaque without
+the passphrase, so cloud-sync services do not see the contents.
+`*.gpg` is in the repo-root `.gitignore` as a safety net.
+
+### Create the backup
+
+Run from the repo root. GPG will prompt for a passphrase twice.
+Use a strong passphrase and **store it in your password manager**
+under the same vault entry that references this handbook.
+
+```bash
+gpg -c --output OPERATOR-PRIVATE.md.gpg OPERATOR-PRIVATE.md
+```
+
+The output is encrypted with AES-256 (GPG 2.x default symmetric
+cipher).
+
+### Decrypt to recover
+
+```bash
+gpg --output OPERATOR-PRIVATE.md --decrypt OPERATOR-PRIVATE.md.gpg
+```
+
+### Re-encrypt after an edit
+
+```bash
+# --yes overwrites the existing .gpg without prompting
+gpg -c --yes --output OPERATOR-PRIVATE.md.gpg OPERATOR-PRIVATE.md
+```
+
+### Round-trip test (verify the backup is good)
+
+```bash
+# Print only the first 20 lines to stdout — leaves no plaintext on disk
+gpg --decrypt OPERATOR-PRIVATE.md.gpg | head -20
+```
+
+A clean round-trip output is the only confirmation that:
+
+- The `.gpg` file is not corrupt.
+- Your password-manager entry holds the correct passphrase.
+
+### Backup cadence
+
+Re-encrypt after every meaningful edit to the handbook. A stale
+backup is worse than no backup — it gives false reassurance.
+
 ---
 
 *This is the template. The filled-in version lives in
-`OPERATOR-PRIVATE.md` at the repo root, gitignored.*
+`OPERATOR-PRIVATE.md` at the repo root, gitignored. The encrypted
+backup is `OPERATOR-PRIVATE.md.gpg`, also gitignored.*

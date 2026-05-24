@@ -50,3 +50,8 @@ files/
 # private URLs). Reference-only — no literal secrets are stored here, but
 # the file inventories where every credential lives, so it stays out of git.
 OPERATOR-PRIVATE.md
+
+# GPG-encrypted backups (covers OPERATOR-PRIVATE.md.gpg and any other
+# locally-encrypted artefact). Safety net — the backup itself is encrypted
+# at rest, but it has no place in git regardless.
+*.gpg
