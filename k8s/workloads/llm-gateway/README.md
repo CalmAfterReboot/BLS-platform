@@ -152,6 +152,56 @@ A `401` from step 2 means the Bearer token is missing or wrong. A `504`
 means LiteLLM exceeded its 130s client timeout — usually because Ollama
 is loading a model from cold; retry.
 
+## Live verification (opt-in)
+
+An opt-in pytest suite under [`tests/live/`](tests/live/) exercises the
+real OpenAI path **through the LiteLLM Python SDK** — the same library
+the deployed LiteLLM proxy uses for its routing. It is not a smoke test
+of the FastAPI proxy in `app/`; it is a verification that LiteLLM's
+OpenAI integration and fallback behaviour work as expected against a
+real upstream, with sanitised JSON evidence committed under
+[`docs/verification/`](docs/verification/).
+
+The suite is **gated behind the `live` pytest marker** and excluded by
+default via `addopts = -m 'not live'` in
+[`pyproject.toml`](pyproject.toml). It skips cleanly when
+`OPENAI_API_KEY` is absent, so it never breaks CI.
+
+```bash
+cd k8s/workloads/llm-gateway
+cp .env.example .env       # then paste your OpenAI key into .env
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+
+pytest -m live -v          # ~2 billable OpenAI calls, < $0.0001 per run
+ls docs/verification/      # dated JSON evidence
+```
+
+Two scenarios are exercised:
+
+| Scenario | Mechanism | Expected outcome |
+|---|---|---|
+| Happy path | `litellm.completion(model="openai/gpt-4o-mini", ...)` | Non-empty completion, `failover_occurred=false`, single attempt. |
+| Forced failover | `litellm.Router` with bad primary `openai/does-not-exist-…` and `gpt-4o-mini` as the fallback | Router catches the OpenAI 404 (free, no tokens billed), serves the response from gpt-4o-mini, `failover_occurred=true`, two attempts. |
+
+Each run writes a dated JSON artefact:
+
+- `openai-live-happy-path-YYYY-MM-DD.json`
+- `openai-live-forced-failover-YYYY-MM-DD.json`
+
+The artefacts contain **no API key, no headers, no auth material** —
+only the test inputs and a sanitised view of the gateway's response
+envelope (`model_used`, `completion`, `attempts`, `failover_occurred`,
+`latency_ms`, `finish_reason`). See [`SECURITY.md`](SECURITY.md) for the
+secret-management posture, the `$10` prepay cap, the
+`detect-secrets` baseline workflow, and the key-rotation playbook.
+
+The suite is local-only and never run on CI; the deployed
+`templates/configmap-litellm.yaml` does not currently include an OpenAI
+provider entry, so the verification path does not touch the deployed
+cluster. SDK-vs-proxy version drift is called out in `SECURITY.md`.
+
 ## Things to know (operational history)
 
 These notes are not tutorial — they exist so the next operator does
