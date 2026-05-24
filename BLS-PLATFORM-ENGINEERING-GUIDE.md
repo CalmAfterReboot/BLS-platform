@@ -96,7 +96,7 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
 
 ## 4. Technical depth — per-project deep dives
 
-> **Architect-fill section.** Each P1-P5 subsection below has its concept-and-tool framing and its reading-path links already populated (Plan-v4 Week 2). The two rows marked `[Architect fills in — see ADR-NNN, diagram NN]` are deliberately left for the architect's voice. Fill in 2-3 sentences in your own words: the decision that made this senior, and the trade-off you accepted. Do not let those rows be ghost-written; the rest of the document carries no first-person claim that those two rows do not earn.
+> **Architect-fill section.** Each P1-P5 subsection below has its concept-and-tool framing and its reading-path links already populated (Plan-v4 Week 2). The two rows marked `[Architect fills in — see ADR-NNN, diagram NN]` are deliberately left for the architect's voice. Fill in 2-3 sentences in your own words: the load-bearing decision, and the trade-off you accepted. Do not let those rows be ghost-written; the rest of the document carries no first-person claim that those two rows do not earn.
 
 ### 4.1 Azure landing zone — depth view (P1)
 
@@ -107,7 +107,7 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
   - System-wide container view: [`docs/diagrams/01-container-view.py`](docs/diagrams/01-container-view.py)
   - Concept-to-tool row: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (rows for *Declarative state with reconciliation*, *Tagging discipline + spend control*, *Remote Terraform state with locking*)
   - Project README: [`projects/01-landing-zone/README.md`](projects/01-landing-zone/README.md)
-- **The decision that made this senior:** *[Architect fills in — name the load-bearing call. Candidates: hub-spoke over flat VNet at this scale, NSG strategy, the remote-state hardening posture, the tag-policy enforcement model. Pick one, 2-3 sentences.]*
+- **Load-bearing decision:** *[Architect fills in — name the load-bearing call. Candidates: hub-spoke over flat VNet at this scale, NSG strategy, the remote-state hardening posture, the tag-policy enforcement model. Pick one, 2-3 sentences.]*
 - **What I deliberately didn't build:** *[Architect fills in — name what was in scope and consciously cut. Candidates: Azure Firewall in front of the hub, Bastion, private endpoints across the data plane, Front Door. Pick one, 2-3 sentences with the trade-off accepted.]*
 
 ### 4.2 k3s cluster — depth view (P2)
@@ -119,7 +119,7 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
   - ADRs: [`ADR-002 — homelab over cloud-only`](docs/adr/ADR-002-homelab-over-cloud-only.md), [`ADR-003 — Ansible over cloud-init`](docs/adr/ADR-003-ansible-over-cloud-init.md)
   - Concept-to-tool rows: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*Container orchestration with HA on commodity hardware*, *Configuration management as code*, *Defence-in-depth on bootstrap nodes*)
   - Ansible role: [`ansible/roles/node-hardening/`](ansible/roles/node-hardening/)
-- **The decision that made this senior:** *[Architect fills in — see ADR-002 and ADR-003. Candidates: HA via three CP nodes rather than single-CP "simpler" homelab, etcd-embedded over external, hardening as a re-runnable Ansible role rather than a one-shot bootstrap script. 2-3 sentences.]*
+- **Load-bearing decision:** *[Architect fills in — see ADR-002 and ADR-003. Candidates: HA via three CP nodes rather than single-CP "simpler" homelab, etcd-embedded over external, hardening as a re-runnable Ansible role rather than a one-shot bootstrap script. 2-3 sentences.]*
 - **What I deliberately didn't build:** *[Architect fills in — Candidates: managed AKS (would have shipped faster but lost the etcd-outward learning surface), Talos / k0s instead of k3s, GitOps-managed Ansible runs. 2-3 sentences with the trade-off accepted.]*
 
 ### 4.3 Multi-cluster GitOps — depth view (P3)
@@ -132,7 +132,7 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
   - Concept-to-tool rows: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*GitOps as the deployment boundary*, *Declarative fleet management*)
   - Project README: [`03-aks-multicluster/README.md`](03-aks-multicluster/README.md)
   - Forensic case study: PHASE-2-HANDOFF.md WU-2 (local-only) — worked example of GitOps incident response.
-- **The decision that made this senior:** *[Architect fills in — see ADR-005, diagram 04. Candidates: matrix generator over list/Git alone (the N×M scaling argument), uniform sync policy across child apps, `selfHeal=true` despite the operational implications. 2-3 sentences.]*
+- **Load-bearing decision:** *[Architect fills in — see ADR-005, diagram 04. Candidates: matrix generator over list/Git alone (the N×M scaling argument), uniform sync policy across child apps, `selfHeal=true` despite the operational implications. 2-3 sentences.]*
 - **What I deliberately didn't build:** *[Architect fills in — Candidates: Flux (different CRD layout for the same model), ArgoCD ApplicationSet plugin generators, app-of-apps over ApplicationSet. 2-3 sentences with the trade-off.]*
 
 ### 4.4 LLM gateway — depth view (P4)
@@ -144,7 +144,7 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
   - ADR: [`ADR-008 — LLM gateway design`](docs/adr/ADR-008-llm-gateway-design.md)
   - Concept-to-tool row: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*API gateway pattern for backend abstraction*)
   - Project README: [`k8s/workloads/llm-gateway/README.md`](k8s/workloads/llm-gateway/README.md) — operator-facing runbook including the six-item "things to know" operational history.
-- **The decision that made this senior:** Auth at the FastAPI edge rather than in LiteLLM. LiteLLM's authentication model is built around spend-tracking with a PostgreSQL dependency this stack does not have; placing auth at the FastAPI edge means the security boundary is a fifteen-line middleware in a single file (`app/middleware/auth.py`) that can be diff-reviewed and carries no database lifecycle to manage. The trade-off accepted is two in-cluster hops per request — caller → FastAPI → LiteLLM → backend, ~5–10 ms of in-cluster networking — in exchange for the ability to swap LiteLLM for any other multi-provider router without rewriting authentication, and the ability to add semantic caching, rate limiting, or response post-processing as future FastAPI middleware without changing the routing contract.
+- **Load-bearing decision:** Auth at the FastAPI edge rather than in LiteLLM. LiteLLM's authentication model is built around spend-tracking with a PostgreSQL dependency this stack does not have; placing auth at the FastAPI edge means the security boundary is a fifteen-line middleware in a single file (`app/middleware/auth.py`) that can be diff-reviewed and carries no database lifecycle to manage. The trade-off accepted is two in-cluster hops per request — caller → FastAPI → LiteLLM → backend, ~5–10 ms of in-cluster networking — in exchange for the ability to swap LiteLLM for any other multi-provider router without rewriting authentication, and the ability to add semantic caching, rate limiting, or response post-processing as future FastAPI middleware without changing the routing contract.
 - **What I deliberately didn't build:** Semantic caching. Redis is wired in from day one and Helm-managed alongside the gateway, but only as an exact-match cache; semantic similarity requires an embeddings model and a vector index that the homelab does not currently host. The topology supports both — adding semantic caching is a configuration change in `configmap-litellm.yaml`, not an architectural one. Streaming responses and request-shape rate limiting are deferred for the same reason: the design accommodates them but no caller's needs justify the operational cost today.
 
 ### 4.5 Observability + security — depth view (P5)
@@ -157,7 +157,7 @@ The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/
   - Concept-to-tool rows: [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md) (*Pull-based metrics*, *Encrypted secrets in Git*, *Multi-source ArgoCD Application*)
   - Runbook: [`docs/runbooks/sealed-secrets-controller.md`](docs/runbooks/sealed-secrets-controller.md)
   - Project directory: [`05-observability-security/`](05-observability-security/) (P5 README under WU-6, Week 3)
-- **The decision that made this senior:** *[Architect fills in — see ADR-006. Candidates: ServerSideApply=true for kube-prometheus-stack (the CRD-size argument), Sealed Secrets over SOPS / External Secrets Operator (the credential-distribution argument), multi-source Application pattern over umbrella chart. 2-3 sentences.]*
+- **Load-bearing decision:** *[Architect fills in — see ADR-006. Candidates: ServerSideApply=true for kube-prometheus-stack (the CRD-size argument), Sealed Secrets over SOPS / External Secrets Operator (the credential-distribution argument), multi-source Application pattern over umbrella chart. 2-3 sentences.]*
 - **What I deliberately didn't build:** *[Architect fills in — Candidates: Loki / centralised log aggregation, Tempo / distributed tracing, NetworkPolicy enforcement across every namespace (only the load-bearing ones today), externalised Grafana state. 2-3 sentences with the trade-off.]*
 
 ---
