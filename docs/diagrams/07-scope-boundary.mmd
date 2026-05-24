@@ -9,9 +9,10 @@ flowchart LR
         I1["Hub-spoke Azure landing zone"]:::inscope
         I2["HA k3s on Proxmox"]:::inscope
         I3["Matrix ApplicationSet GitOps"]:::inscope
-        I4["LLM gateway (live)"]:::inscope
+        I4["LLM gateway (live) — SealedSecret-backed"]:::inscope
         I5["Prometheus + Sealed Secrets"]:::inscope
-        I6["ADRs, runbooks, release tags"]:::inscope
+        I6["Live OpenAI verification + committed evidence"]:::inscope
+        I7["ADRs, runbooks, release tags"]:::inscope
     end
 
     subgraph OUT["OUT OF SCOPE"]

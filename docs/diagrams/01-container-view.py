@@ -61,6 +61,7 @@ with Diagram(
     with Cluster("External LLM providers"):
         deepseek = CognitiveServices("DeepSeek API")
         aoai = CognitiveServices("Azure OpenAI")
+        openai = CognitiveServices("OpenAI\n(live verification path)")
 
     # Azure landing zone (P1)
     with Cluster("Azure subscription (P1)"):
@@ -114,6 +115,15 @@ with Diagram(
     litellm >> Edge(label="HTTP\n11434", color="darkgreen") >> ollama
     litellm >> Edge(label="HTTPS", color="darkblue") >> deepseek
     litellm >> Edge(label="HTTPS", color="darkblue") >> aoai
+    litellm >> Edge(label="HTTPS\n(live verification only)", color="darkblue", style="dashed") >> openai
+
+    # Sealed-secrets controller unseals committed SealedSecrets into
+    # in-namespace Secrets that the gateway and LiteLLM mount as env vars
+    # (BLS_API_KEYS, LITELLM_MASTER_KEY, OLLAMA_ENDPOINT). Edge is
+    # rendered dashed because the relationship is provisioning-time,
+    # not request-time.
+    sealed >> Edge(label="unseals\nllm-gateway-secrets", style="dashed", color="darkred") >> fastapi
+    sealed >> Edge(label="OLLAMA_ENDPOINT", style="dashed", color="darkred") >> litellm
 
     prom >> Edge(label="scrapes /metrics", style="dotted") >> fastapi
     prom >> Edge(label="scrapes", style="dotted") >> argocd

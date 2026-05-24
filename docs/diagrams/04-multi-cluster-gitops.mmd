@@ -20,12 +20,13 @@ sequenceDiagram
         K3s-->>ArgoCD: resource status<br/>(Synced / Healthy)
     and Reconcile to AKS
         ArgoCD->>AKS: helm template + kubectl apply
-        AKS-->>ArgoCD: resource status<br/>(Synced / Healthy)
+        Note right of AKS: AKS currently torn down<br/>for cost discipline (WU-5).<br/>Sync status = Unknown.
+        AKS--xArgoCD: unreachable
     end
 
-    ArgoCD-->>Dev: UI shows<br/>both child apps Synced/Healthy
+    ArgoCD-->>Dev: UI shows<br/>in-cluster: Synced/Healthy<br/>bls-aks-demo: Unknown<br/>(by design until WU-5)
 
-    Note over ArgoCD,AKS: selfHeal=true: any manual drift<br/>in either cluster is reverted<br/>within minutes.
+    Note over ArgoCD,AKS: selfHeal=true: any manual drift<br/>in either cluster is reverted<br/>within minutes when that cluster is reachable.
 
 %% Caption — supports BLS-PLATFORM-ENGINEERING-GUIDE.md §4 (P3 multi-cluster
 %% GitOps) and ADR-005 (ApplicationSet matrix pattern). The diagram shows the
