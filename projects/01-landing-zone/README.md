@@ -7,7 +7,7 @@ A production-grade Azure landing zone built with Terraform, implementing hub-spo
 ## Architecture
 
 ```
-Subscription: BLS (9a3b36fe)
+Subscription: BLS (<subscription-id>)
 └── Resource Group: bls-landing-zone-dev-rg (uksouth)
     ├── Networking
     │   ├── Hub VNet: 10.0.0.0/16
@@ -29,7 +29,7 @@ Subscription: BLS (9a3b36fe)
             └── Diagnostic: workload NSG events + rule counters
 ```
 
-**Remote state:** `stblstfstate001` / `tfstate` container / `projects/01-landing-zone/dev.tfstate`
+**Remote state:** Azure Storage account (name redacted) / `tfstate` container / `projects/01-landing-zone/dev.tfstate`
 
 ---
 
@@ -110,8 +110,8 @@ Diagnostic settings require a workspace ID at deploy time. A permanent centralis
 
 **Authentication** — az login drops every terminal session on the DevVM. Always authenticate before running Terraform:
 ```bash
-az login --tenant c738230e-d7a0-48e4-8255-2511fd7c66c0 --use-device-code
-az account set --subscription 9a3b36fe-45be-4fa2-a2a6-b3427a25a8c5
+az login --tenant <tenant-id> --use-device-code
+az account set --subscription <subscription-id>
 ```
 
 **State lock** — if a plan or apply is interrupted (Ctrl+C), the remote state blob remains locked. Force-unlock with the lock ID shown in the error:
