@@ -36,7 +36,7 @@ Five built projects and one intentionally empty placeholder. Each project's READ
 
 **Concept:** declarative state with reconciliation, tagging discipline at the policy layer, remote Terraform state with locking, hub-spoke network topology with security boundaries that deny by default.
 
-**Implementation:** Terraform-defined Azure resource group, hub and spoke virtual networks with peering, two network security groups governing east-west and north-south traffic, Log Analytics workspace for centralised diagnostics, Azure Policy assignments enforcing tag presence and geographic restriction. State held in `stblstfstate001/tfstate` with blob-locking. Live in subscription `9a3b36fe-…-uksouth`.
+**Implementation:** Terraform-defined Azure resource group, hub and spoke virtual networks with peering, two network security groups governing east-west and north-south traffic, Log Analytics workspace for centralised diagnostics, Azure Policy assignments enforcing tag presence and geographic restriction. State held in an Azure Storage account (name redacted) with blob-locking. Live in a UK South Azure subscription (subscription ID intentionally not printed here; available on request).
 
 **What this demonstrates:** the candidate can stand up a compliant cloud foundation from first principles, including the parts that are easy to skip (remote state, locking, deny-by-default NSG posture, tag-presence policies). The total Azure spend is sub-£0.01/month at rest — discipline visible on the cost line.
 

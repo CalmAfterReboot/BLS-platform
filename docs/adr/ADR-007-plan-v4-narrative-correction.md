@@ -15,7 +15,7 @@ The BLS portfolio reached a state at which the engineering work materially outra
 
 Concretely, as of 2026-05-13 (BLS-STATUS.md audit baseline):
 
-- **P1 Azure Landing Zone** — built; resource group, hub-and-spoke VNets, two NSGs, Log Analytics live in subscription `9a3b36fe-…-uksouth`; remote Terraform state in `stblstfstate001/tfstate`.
+- **P1 Azure Landing Zone** — built; resource group, hub-and-spoke VNets, two NSGs, Log Analytics live in a UK South Azure subscription (ID redacted); remote Terraform state in an Azure Storage account (name redacted).
 - **P2 k3s HA Platform** — built; Terraform via `bpg/proxmox 0.66.3`, Ansible `node-hardening` role, ADR-004 documented; cluster live with three+ nodes Running for five days.
 - **P3 Multi-cluster GitOps** — partial; matrix ApplicationSet and ADR-005 in place; AKS torn down for cost discipline; dangling ArgoCD cluster registration plus three `*-bls-aks-demo` Applications showing Unknown.
 - **P4 LLM Gateway** — built (with drift); FastAPI + LiteLLM + Redis live on k3s for several days; chart duplication open as WU-3.

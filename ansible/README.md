@@ -223,11 +223,11 @@ all:
     nodes:
       hosts:
         bls-node-01:
-          ansible_host: 192.168.200.50
+          ansible_host: <homelab-subnet>.50
           ansible_connection: local
           ansible_user: dev
         bls-node-02:
-          ansible_host: 192.168.200.51
+          ansible_host: <homelab-subnet>.51
           ansible_user: dev
           # no ansible_connection: local — reaches node-02 over SSH from node-01
 ```
@@ -270,7 +270,7 @@ Ansible cannot reach the host. For `ansible_connection: local` this should never
 
 ```bash
 # Test raw connectivity first
-ssh dev@192.168.200.50
+ssh dev@<homelab-subnet>.50
 
 # Check that sshd is listening
 ss -tlnp | grep :22

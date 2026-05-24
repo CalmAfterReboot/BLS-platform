@@ -15,7 +15,7 @@ The BLS homelab requires a repeatable, auditable method of applying a security b
 
 Cloud-Init runs once at first boot and is well-suited for bootstrapping immutable infrastructure. Ansible runs on-demand and is designed for iterative, day-2 operations on long-lived nodes.
 
-The target environment is a homelab node (`192.168.200.50`) that will be re-hardened over time as security requirements evolve, rather than torn down and reprovisioned on every change.
+The target environment is a homelab node on a private VLAN that will be re-hardened over time as security requirements evolve, rather than torn down and reprovisioned on every change.
 
 ---
 

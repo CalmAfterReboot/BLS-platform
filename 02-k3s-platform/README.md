@@ -33,7 +33,7 @@ An end-to-end, infrastructure-as-code provisioned Kubernetes HA cluster running 
 | **IaC** | Terraform (`bpg/proxmox` 0.66.3) |
 | **Configuration management** | Ansible (`node-hardening` role) |
 | **OS** | Ubuntu 24.04 LTS (cloud-init image) |
-| **Network** | VLAN 200 — 192.168.200.0/24 |
+| **Network** | VLAN-X — <homelab-subnet>.0/24 |
 | **State backend** | Azure Storage (azurerm) |
 | **SSH user** | `ansible` — key `~/.ssh/bls_ansible_ed25519` |
 
@@ -46,22 +46,22 @@ An end-to-end, infrastructure-as-code provisioned Kubernetes HA cluster running 
 - CPU: 6-core Xeon
 - RAM: 128 GB
 - Storage: `local-lvm` (LVM thin pool)
-- Network: VLAN-aware bridge (`VLAN`), carrying tagged VLAN 200
+- Network: VLAN-aware bridge (`VLAN`), carrying tagged VLAN-X
 
 ### Control Plane Nodes — etcd quorum + k3s API server
 
 | Name | VM ID | IP | vCPU | RAM | Disk |
 |---|---|---|---|---|---|
-| k3s-control-01 | 201 | 192.168.200.10 | 2 | 4 GB | 32 GB |
-| k3s-control-02 | 202 | 192.168.200.11 | 2 | 4 GB | 32 GB |
-| k3s-control-03 | 203 | 192.168.200.12 | 2 | 4 GB | 32 GB |
+| k3s-control-01 | 201 | <homelab-subnet>.10 | 2 | 4 GB | 32 GB |
+| k3s-control-02 | 202 | <homelab-subnet>.11 | 2 | 4 GB | 32 GB |
+| k3s-control-03 | 203 | <homelab-subnet>.12 | 2 | 4 GB | 32 GB |
 
 ### Worker Nodes — workload scheduling
 
 | Name | VM ID | IP | vCPU | RAM | Disk |
 |---|---|---|---|---|---|
-| k3s-worker-01 | 204 | 192.168.200.20 | 2 | 16 GB | 80 GB |
-| k3s-worker-02 | 205 | 192.168.200.21 | 2 | 16 GB | 80 GB |
+| k3s-worker-01 | 204 | <homelab-subnet>.20 | 2 | 16 GB | 80 GB |
+| k3s-worker-02 | 205 | <homelab-subnet>.21 | 2 | 16 GB | 80 GB |
 
 **All VMs:** CPU type `host` (passthrough), CPU units `512`, `qemu-guest-agent` enabled, `on_boot = true`, `discard = on` (LVM thin provisioning), cloud-init user `ansible`.
 
@@ -77,8 +77,8 @@ Management Network
         │
   inter-VLAN routing
         │
-  VLAN 200 — 192.168.200.0/24
-  Gateway / DNS: 192.168.200.1 (pfSense unbound)
+  VLAN-X — <homelab-subnet>.0/24
+  Gateway / DNS: <homelab-subnet>.1 (pfSense unbound)
         │
   Proxmox VLAN-aware bridge (bridge: VLAN)
     ┌───┴───┐
@@ -88,7 +88,7 @@ Control   Workers
 .12
 ```
 
-- pfSense manages inter-VLAN routing between the management network and VLAN 200
+- pfSense manages inter-VLAN routing between the management network and VLAN-X
 - All k3s nodes resolve DNS via the pfSense unbound resolver at the gateway IP
 - Inbound traffic to nodes is restricted to explicitly allowed UFW ports only
 
@@ -284,7 +284,7 @@ qm list | grep 9000
 | Outputs sourced from `locals` | `control_plane_ips` and `worker_ips` are computable at `plan` time — the inventory generator does not require a completed `apply` |
 | Azure remote state | Shared, locked state supports multi-operator workflows and prevents concurrent `apply` conflicts |
 | `insecure = true` on provider | Proxmox uses a self-signed TLS certificate on its API endpoint |
-| VLAN bridge without tag override | The bridge (`VLAN`) handles VLAN 200 tagging at the physical layer; `vlan_id = 200` in the network device block instructs the provider to tag frames correctly |
+| VLAN bridge without tag override | The bridge (`VLAN`) handles VLAN-X tagging at the physical layer; `vlan_id = <vlan-id>` in the network device block instructs the provider to tag frames correctly |
 
 ### 2.1 Initialise
 
@@ -319,14 +319,14 @@ terraform output
 
 ```
 control_plane_ips = {
-  "k3s-control-01" = "192.168.200.10"
-  "k3s-control-02" = "192.168.200.11"
-  "k3s-control-03" = "192.168.200.12"
+  "k3s-control-01" = "<homelab-subnet>.10"
+  "k3s-control-02" = "<homelab-subnet>.11"
+  "k3s-control-03" = "<homelab-subnet>.12"
 }
-first_control_plane_ip = "192.168.200.10"
+first_control_plane_ip = "<homelab-subnet>.10"
 worker_ips = {
-  "k3s-worker-01" = "192.168.200.20"
-  "k3s-worker-02" = "192.168.200.21"
+  "k3s-worker-01" = "<homelab-subnet>.20"
+  "k3s-worker-02" = "<homelab-subnet>.21"
 }
 ```
 
@@ -371,17 +371,17 @@ all:
         k3s_control:
           hosts:
             k3s-control-01:
-              ansible_host: 192.168.200.10
+              ansible_host: <homelab-subnet>.10
             k3s-control-02:
-              ansible_host: 192.168.200.11
+              ansible_host: <homelab-subnet>.11
             k3s-control-03:
-              ansible_host: 192.168.200.12
+              ansible_host: <homelab-subnet>.12
         k3s_worker:
           hosts:
             k3s-worker-01:
-              ansible_host: 192.168.200.20
+              ansible_host: <homelab-subnet>.20
             k3s-worker-02:
-              ansible_host: 192.168.200.21
+              ansible_host: <homelab-subnet>.21
   vars:
     ansible_user: ansible
     ansible_ssh_private_key_file: ~/.ssh/bls_ansible_ed25519
@@ -633,13 +633,13 @@ packages_install:
 
 **Symptom:** `Temporary failure resolving 'archive.ubuntu.com'` on all five nodes simultaneously during `apt update`.
 
-**Cause:** A stale NAT port-forward rule in pfSense was redirecting **all traffic destined for the gateway IP** (including DNS queries sent to unbound on port 53) to an external IP. Queries left VLAN 200 but were NATted before reaching the local resolver — unbound never received them.
+**Cause:** A stale NAT port-forward rule in pfSense was redirecting **all traffic destined for the gateway IP** (including DNS queries sent to unbound on port 53) to an external IP. Queries left VLAN-X but were NATted before reaching the local resolver — unbound never received them.
 
 **Diagnosis path:**
 
 1. Confirmed unbound was running and listening on wildcard: `ss -ulnp | grep 53`
-2. Confirmed access-control in `unbound.conf` allowed the VLAN 200 subnet
-3. `tcpdump` on the pfSense VLAN 200 interface showed DNS queries arriving with no replies
+2. Confirmed access-control in `unbound.conf` allowed the VLAN-X subnet
+3. `tcpdump` on the pfSense VLAN-X interface showed DNS queries arriving with no replies
 4. Inspected `config.xml` — found a NAT rule with destination matching the gateway IP, redirecting all ports
 
 **Fix:** Removed the offending NAT rule from pfSense under **Firewall → NAT → Port Forward**, then reloaded the ruleset:
@@ -721,10 +721,10 @@ pfctl -F nat
 **Symptom:** k3s failed immediately with:
 
 ```
-listen tcp 192.168.200.11:2380: bind: cannot assign requested address
+listen tcp <homelab-subnet>.11:2380: bind: cannot assign requested address
 ```
 
-**Cause:** The control-02 join command was run on the wrong node — executed on control-01 while the shell prompt still showed control-01's hostname. The join command partially wrote control-02's IP (`192.168.200.11`) into control-01's etcd member configuration before failing, leaving etcd in a corrupted intermediate state.
+**Cause:** The control-02 join command was run on the wrong node — executed on control-01 while the shell prompt still showed control-01's hostname. The join command partially wrote control-02's IP (`<homelab-subnet>.11`) into control-01's etcd member configuration before failing, leaving etcd in a corrupted intermediate state.
 
 **Fix:** There is no safe partial fix for corrupted etcd member config. Required a full reinstall:
 
@@ -739,10 +739,10 @@ rm -rf /var/lib/rancher/k3s
 # Re-bootstrap the cluster from scratch
 curl -sfL https://get.k3s.io | sh -s - server \
   --cluster-init \
-  --tls-san 192.168.200.5 \
-  --tls-san 192.168.200.10 \
+  --tls-san <homelab-subnet>.5 \
+  --tls-san <homelab-subnet>.10 \
   --disable traefik \
-  --node-ip 192.168.200.10
+  --node-ip <homelab-subnet>.10
 ```
 
 **Lesson:** Always verify the shell prompt hostname before running a join command. Double-check with `hostname` or `cat /etc/hostname`. etcd member config corruption requires a full `k3s-uninstall.sh` + data wipe — there is no `etcdctl` incantation that reliably recovers a node that partially joined with the wrong IP.
@@ -808,7 +808,7 @@ spec:
     - name: vip_retryperiod
       value: "1"
     - name: address
-      value: 192.168.200.5
+      value: <homelab-subnet>.5
     securityContext:
       capabilities:
         add:
@@ -837,17 +837,17 @@ EOF
 
 **Phase:** k3s cluster installation
 
-**Symptom:** After bootstrapping control-01 with kube-vip, pinging the VIP (`192.168.200.5`) from control-02 returned `Destination Host Unreachable`. The kube-vip pod showed as `Running`, and `ip addr` on control-01 showed the VIP bound:
+**Symptom:** After bootstrapping control-01 with kube-vip, pinging the VIP (`<homelab-subnet>.5`) from control-02 returned `Destination Host Unreachable`. The kube-vip pod showed as `Running`, and `ip addr` on control-01 showed the VIP bound:
 
 ```
-inet 192.168.200.5/32 scope global eth0
+inet <homelab-subnet>.5/32 scope global eth0
 ```
 
 **Root cause:** The VIP binding was a remnant of the accidental self-join incident (Issue 6). After the corrupted bootstrap, k3s entered a crash loop — kube-vip was running as a static pod but k3s itself was not functional. kube-vip bound the VIP address to the interface correctly, but because k3s was crash-looping, kube-vip was also cycling and had not completed a stable ARP announcement to the layer-2 segment before it was taken down again. Other nodes never received a valid ARP entry mapping the VIP to control-01's MAC address.
 
 **Fix:** Resolved as part of the full reinstall for Issue 6. After a clean bootstrap, kube-vip stabilised immediately and the VIP was reachable from all nodes within seconds of the pod reaching `Running`.
 
-**Lesson:** A VIP bound on the interface (`ip addr` shows `inet 192.168.200.5/32`) does **not** guarantee kube-vip is functional. The ARP announcement only propagates reliably when kube-vip has been stable for several seconds. Always verify with a ping from a second node immediately after the bootstrap completes — before proceeding to join additional control planes. If the VIP is not reachable from the second node, do not continue the join sequence.
+**Lesson:** A VIP bound on the interface (`ip addr` shows `inet <homelab-subnet>.5/32`) does **not** guarantee kube-vip is functional. The ARP announcement only propagates reliably when kube-vip has been stable for several seconds. Always verify with a ping from a second node immediately after the bootstrap completes — before proceeding to join additional control planes. If the VIP is not reachable from the second node, do not continue the join sequence.
 
 ---
 

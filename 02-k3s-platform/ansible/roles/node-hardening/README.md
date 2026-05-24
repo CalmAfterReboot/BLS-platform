@@ -446,7 +446,7 @@ The role configured `AllowUsers dev`. If you are connecting as a different user,
 
 ```bash
 # Confirm what user you are connecting as
-ssh -v dev@192.168.200.50   # check the username in the debug output
+ssh -v dev@<homelab-subnet>.50   # check the username in the debug output
 
 # Confirm your key is in authorized_keys on the node
 cat ~/.ssh/authorized_keys
