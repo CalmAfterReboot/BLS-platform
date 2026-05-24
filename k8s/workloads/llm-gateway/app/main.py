@@ -11,7 +11,7 @@ logger = logging.getLogger("bls-gateway")
 app = FastAPI(
     title="BLS LLM Gateway",
     description="Multi-provider LLM routing via LiteLLM",
-    version="0.1.0",
+    version="0.4.0",
 )
 
 Instrumentator().instrument(app).expose(app)
