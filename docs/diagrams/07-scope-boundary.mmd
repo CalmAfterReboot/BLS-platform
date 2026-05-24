@@ -11,8 +11,9 @@ flowchart LR
         I3["Matrix ApplicationSet GitOps"]:::inscope
         I4["LLM gateway (live) — SealedSecret-backed"]:::inscope
         I5["Prometheus + Sealed Secrets"]:::inscope
-        I6["Live OpenAI verification + committed evidence"]:::inscope
-        I7["ADRs, runbooks, release tags"]:::inscope
+        I6["NetworkPolicy on llm-gateway namespace (ADR-009)"]:::inscope
+        I7["Live OpenAI verification + committed evidence"]:::inscope
+        I8["ADRs, runbooks, release tags"]:::inscope
     end
 
     subgraph OUT["OUT OF SCOPE"]
@@ -40,14 +41,16 @@ flowchart LR
 %% node-hardening role), matrix-ApplicationSet GitOps reconciling N×M
 %% Applications, the FastAPI/LiteLLM LLM gateway running with /metrics
 %% exposed, kube-prometheus-stack and Sealed Secrets (runbook, restart
-%% test, key backup), six ADRs, two runbooks, five release tags, and
-%% incident response documented. Right: deliberate non-claims — no
+%% test, key backup), NetworkPolicy enforcement on the llm-gateway
+%% namespace (default-deny baseline + per-pod allows, scope decision
+%% recorded in ADR-009 — monitoring and sealed-secrets explicitly
+%% deferred with reasoning), six ADRs, two runbooks, five release tags,
+%% and incident response documented. Right: deliberate non-claims — no
 %% multi-tenant production workload, no AWS/GCP production depth
 %% inside this repo (GCP is on the P6 roadmap, not built), no
 %% platform-team-of-N coordination (one-architect portfolio), AKS is
 %% torn down for cost discipline (rebuild tracked as WU-5), open WUs
-%% remain (WU-3, 4, 5, 6, 8, 9 — tracked and honest), and no formal
-%% 24/7 SRE on-call (that's MSP context, not this repo). Scope
-%% discipline is a hiring signal — a portfolio that pretends every
-%% loose end is tied is a portfolio that cannot be trusted on the
-%% tied ones.
+%% remain (5, 6, 8, 9 — tracked and honest), and no formal 24/7 SRE
+%% on-call (that's MSP context, not this repo). Scope discipline is a
+%% hiring signal — a portfolio that pretends every loose end is tied
+%% is a portfolio that cannot be trusted on the tied ones.
