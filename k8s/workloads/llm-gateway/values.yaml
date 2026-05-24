@@ -3,7 +3,6 @@ namespace: llm-gateway
 gateway:
   image: ghcr.io/calmafterreboot/bls-llm-gateway:latest
   replicas: 1
-  port: 8000
   resources:
     requests:
       cpu: 100m
@@ -26,8 +25,6 @@ litellm:
 
 redis:
   image: redis:7-alpine
-  replicas: 1
-  port: 6379
   resources:
     requests:
       cpu: 50m
@@ -44,7 +41,3 @@ ingress:
 
 proxmox:
   ollamaEndpoint: "http://10.212.46.5:11434"
-
-secrets:
-  litellmMasterKey: ""
-  apiKeys: ""
