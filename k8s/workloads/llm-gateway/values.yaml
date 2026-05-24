@@ -38,6 +38,3 @@ ingress:
   className: traefik
   host: llm-gateway.local
   tls: false
-
-proxmox:
-  ollamaEndpoint: "http://10.212.46.5:11434"
