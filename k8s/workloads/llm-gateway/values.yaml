@@ -38,3 +38,16 @@ ingress:
   className: traefik
   host: llm-gateway.local
   tls: false
+
+networkPolicies:
+  # Set to false to deploy the chart in a cluster without NetworkPolicy
+  # enforcement (e.g., a cluster running stock Flannel with no policy
+  # controller). When false, no NetworkPolicy resources are rendered and
+  # all in-namespace traffic is permitted. See ADR-009 for scope.
+  enabled: true
+  # Cluster CIDRs are used in the LiteLLM egress allow-list to exclude
+  # in-cluster destinations from the "external" ipBlock. Defaults below
+  # are k3s defaults — override per-cluster (e.g., for an Azure CNI
+  # AKS cluster) via an ApplicationSet values overlay.
+  podCIDR: 10.42.0.0/16
+  serviceCIDR: 10.43.0.0/16

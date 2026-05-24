@@ -1,0 +1,188 @@
+{{- if .Values.networkPolicies.enabled }}
+# NetworkPolicy baseline for the llm-gateway namespace.
+#
+# Scope decision recorded in docs/adr/ADR-009-networkpolicy-scope.md:
+#   - llm-gateway namespace is policied (handles authenticated requests,
+#     holds master-key-protected upstream credentials, egresses to
+#     external LLM providers).
+#   - monitoring + sealed-secrets namespaces are explicitly deferred —
+#     see ADR-009 for the reasoning.
+#
+# Enforcement requires a NetworkPolicy controller. k3s ships kube-router
+# for this by default; verify with the deny-all empirical test recorded
+# in 05-observability-security/README.md before assuming enforcement.
+#
+# Toggle with .Values.networkPolicies.enabled (default true). The
+# cluster CIDRs in the LiteLLM egress allow-list are k3s defaults; for
+# AKS or other clusters, override .Values.networkPolicies.podCIDR and
+# .Values.networkPolicies.serviceCIDR via an ApplicationSet values
+# overlay.
+---
+# 1/4 — Default deny baseline for every pod in the namespace.
+# Belt-and-braces: any future pod added to llm-gateway namespace is
+# denied by default until a policy explicitly allows it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2/4 — FastAPI gateway pod (app=llm-gateway).
+# Ingress: Prometheus (monitoring namespace) scrapes /metrics on :8000.
+#   No other in-cluster pod calls the gateway. External callers reach
+#   the gateway via kubectl port-forward (apiserver-mediated, bypasses
+#   NetworkPolicy) or via the orphaned Ingress (Traefik is disabled on
+#   this k3s cluster — when an ingress controller is added, this policy
+#   needs an additional ingress rule allowing from the controller's
+#   namespace).
+# Egress: gateway → LiteLLM on :4000 (the only in-cluster destination)
+#   plus CoreDNS for service-name resolution.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: llm-gateway
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - port: 8000
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: litellm
+      ports:
+        - port: 4000
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+# 3/4 — LiteLLM router pod (app=litellm).
+# Ingress: only the FastAPI gateway calls LiteLLM. Direct caller access
+#   to LiteLLM is intentionally blocked — auth is enforced at the
+#   FastAPI edge (see ADR-008), not in LiteLLM.
+# Egress: Redis (in-cluster, exact-match cache), CoreDNS (service +
+#   public DNS resolution), and external LLM provider traffic. The
+#   external rule excludes cluster CIDRs to prevent it from
+#   accidentally widening in-cluster reach.
+#     - port 11434: Ollama on the Proxmox host (HTTP)
+#     - port 443:   OpenAI / Azure OpenAI / DeepSeek (HTTPS)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: litellm-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: litellm
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: llm-gateway
+      ports:
+        - port: 4000
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - port: 6379
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - {{ .Values.networkPolicies.podCIDR }}
+              - {{ .Values.networkPolicies.serviceCIDR }}
+      ports:
+        - port: 11434
+          protocol: TCP
+        - port: 443
+          protocol: TCP
+---
+# 4/4 — Redis cache pod (app=redis).
+# Ingress: only LiteLLM calls Redis.
+# Egress: CoreDNS only. Redis itself does not initiate external traffic
+#   in this deployment (no replication, no AOF off-host, no auth lookup).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: litellm
+      ports:
+        - port: 6379
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+{{- end }}
