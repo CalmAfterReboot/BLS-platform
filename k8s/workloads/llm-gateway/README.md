@@ -266,11 +266,16 @@ Week 3.
 
 | Gap | Owner | Tracker |
 |---|---|---|
-| Plaintext bootstrap `secret.yaml` → Sealed Secrets | Week 3 | WU-4 |
-| `values.yaml:46` still contains the homelab Ollama IP literal — operational default, scrubbing requires either a SealedSecret-backed override or a refactor to inject the endpoint via the existing `secret.yaml` | Week 3 follow-up | Tracked in PR Review Summary |
 | No TLS on ingress | Week 3 | (P5 cert-manager) |
 | Image tag `:latest` instead of digest-pinned | Week 3+ | (ArgoCD Image Updater) |
 | LiteLLM 2Gi memory limit not profiled under sustained load | When load is real | `kubectl top` after representative traffic |
+
+### Closed gaps
+
+| Gap | Resolution |
+|---|---|
+| Plaintext bootstrap `secret.yaml` → Sealed Secrets (WU-4) | Replaced with a `SealedSecret` sealed `--scope=strict` to namespace `llm-gateway`, name `llm-gateway-secrets`. Three keys are sealed: `litellm-master-key`, `bls-api-keys`, `ollama-endpoint`. The homelab sealed-secrets controller in the `sealed-secrets` namespace decrypts on apply. See [SECURITY.md](SECURITY.md#sealedsecret-workflow) for the re-sealing and rotation workflow. AKS cluster (when re-enabled) will need its own sealed manifest sealed against its own controller's public key. |
+| Homelab Ollama IP literal in `values.yaml` | Removed `proxmox.ollamaEndpoint`. The endpoint now lives in the sealed `ollama-endpoint` key and is injected into the LiteLLM pod as the `OLLAMA_ENDPOINT` env var, referenced from `templates/configmap-litellm.yaml` via LiteLLM's `os.environ/OLLAMA_ENDPOINT` substitution syntax. No homelab-internal address is committed to git. |
 
 ## Project history
 

@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: litellm
   namespace: {{ .Values.namespace }}
-  annotations:
-    checksum/config: {{ include (print $.Template.BasePath "/configmap-litellm.yaml") . | sha256sum }}
 spec:
   replicas: {{ .Values.litellm.replicas }}
   selector:
@@ -14,6 +12,9 @@ spec:
     metadata:
       labels:
         app: litellm
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-litellm.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       containers:
         - name: litellm
@@ -21,6 +22,12 @@ spec:
           command: ["litellm", "--config", "/etc/litellm/config.yaml", "--port", "4000"]
           ports:
             - containerPort: 4000
+          env:
+            - name: OLLAMA_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: llm-gateway-secrets
+                  key: ollama-endpoint
           volumeMounts:
             - name: litellm-config
               mountPath: /etc/litellm

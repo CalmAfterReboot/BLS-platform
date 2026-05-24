@@ -9,15 +9,15 @@ data:
       - model_name: local/llama3.2
         litellm_params:
           model: ollama/llama3.2
-          api_base: {{ .Values.proxmox.ollamaEndpoint }}
+          api_base: os.environ/OLLAMA_ENDPOINT
       - model_name: local/mistral
         litellm_params:
           model: ollama/mistral
-          api_base: {{ .Values.proxmox.ollamaEndpoint }}
+          api_base: os.environ/OLLAMA_ENDPOINT
       - model_name: local/deepseek-r1
         litellm_params:
           model: ollama/deepseek-r1:7b
-          api_base: {{ .Values.proxmox.ollamaEndpoint }}
+          api_base: os.environ/OLLAMA_ENDPOINT
     router_settings:
       routing_strategy: least-busy
       num_retries: 2

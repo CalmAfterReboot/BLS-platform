@@ -12,6 +12,8 @@ spec:
     metadata:
       labels:
         app: llm-gateway
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       containers:
         - name: gateway

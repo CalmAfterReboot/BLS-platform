@@ -26,6 +26,101 @@ The gateway never stores upstream-provider secrets in version control:
   (`model_used`, `completion`, `attempts`, `failover_occurred`,
   `latency_ms`, `finish_reason`).
 
+## SealedSecret workflow
+
+The in-cluster `llm-gateway-secrets` Secret is committed as a Bitnami
+`SealedSecret` at [`templates/secret.yaml`](templates/secret.yaml).
+Three keys are sealed:
+
+| Key | Used by |
+|---|---|
+| `litellm-master-key` | `deployment-gateway.yaml` env var (forwarded by the FastAPI proxy as `Authorization: Bearer …` when calling the in-cluster LiteLLM service) |
+| `bls-api-keys` | `deployment-gateway.yaml` env var, validated by `app/middleware/auth.py` for every inbound non-`/healthz`/`/metrics` request |
+| `ollama-endpoint` | `deployment-litellm.yaml` env var, substituted into the LiteLLM configmap via `api_base: os.environ/OLLAMA_ENDPOINT` |
+
+The manifest is sealed with `kubeseal --scope=strict`, which binds it
+to **exactly** namespace `llm-gateway` and name `llm-gateway-secrets`.
+Applying it in any other namespace or under a different name will
+fail to decrypt — by design.
+
+### Re-sealing (rotating keys, changing values, or adding fields)
+
+```bash
+# 1. Build a plaintext Secret manifest locally — NEVER commit this.
+cat > /tmp/llm-gateway-plaintext.yaml <<'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: llm-gateway-secrets
+  namespace: llm-gateway
+type: Opaque
+stringData:
+  litellm-master-key: "<new-value>"
+  bls-api-keys: "<new-value>"
+  ollama-endpoint: "<new-value>"
+EOF
+
+# 2. Fetch the homelab controller's public cert.
+kubeseal --controller-namespace=sealed-secrets \
+         --controller-name=sealed-secrets --fetch-cert > /tmp/ss-cert.pem
+
+# 3. Seal.
+kubeseal --cert=/tmp/ss-cert.pem --format=yaml \
+         --scope=strict --namespace=llm-gateway \
+         < /tmp/llm-gateway-plaintext.yaml > /tmp/llm-gateway-sealed.yaml
+
+# 4. Replace the encryptedData blocks in templates/secret.yaml with the
+#    output. Preserve the Helm template wrapping (the comment header,
+#    `{{ .Values.namespace }}` substitutions, and the strict-scope
+#    metadata).
+
+# 5. Shred the plaintext.
+shred -u /tmp/llm-gateway-plaintext.yaml
+```
+
+After commit + merge, ArgoCD reconciles. The sealed-secrets controller
+unseals the SealedSecret, the resulting `Secret` change triggers a
+rolling restart of both `llm-gateway` and `litellm` deployments via the
+`checksum/secret` annotation on each pod template.
+
+### Reading the current decrypted values
+
+The unsealed Secret is a normal Kubernetes Secret — read it with
+kubectl in the usual way:
+
+```bash
+kubectl get secret llm-gateway-secrets -n llm-gateway \
+  -o jsonpath='{.data.bls-api-keys}' | base64 -d
+```
+
+Treat the output as sensitive: never paste into a chat, never write to
+disk outside `/tmp`, never echo into shell history without `set +o
+history` first.
+
+### Multi-cluster note
+
+`SealedSecret` is **cluster-specific**: the encryption is bound to
+the public key of the sealed-secrets controller running in that
+cluster. The committed `templates/secret.yaml` is sealed against the
+homelab (`in-cluster`) controller only. When the `bls-aks-demo`
+cluster is re-enabled (currently the `llm-gateway-bls-aks-demo`
+Application reports `Unknown` sync), it will need:
+
+- Its own sealed-secrets controller deployed (via the
+  `sealed-secrets` Argo Application).
+- A separate sealed manifest produced against that controller's
+  public cert and applied to the AKS cluster.
+
+The chart structure today does not branch on cluster identity for
+the secret. The forward path when AKS comes back is either:
+
+1. Per-cluster overlays via the ApplicationSet's matrix
+   parameters, OR
+2. An external secret backend (Azure Key Vault + CSI driver) for
+   the AKS deployment specifically.
+
+That decision is deferred until the AKS cluster is reachable again.
+
 ## Cost cap
 
 The OpenAI key used here is **prepay-only with a $10 hard cap.** Each
