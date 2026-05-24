@@ -12,21 +12,25 @@ sequenceDiagram
     participant AOAI as Azure OpenAI<br/>(cloud)
     participant Prom as Prometheus<br/>(scrape, async)
 
+    Note over FastAPI,LiteLLM: Credentials sourced from SealedSecret<br/>'llm-gateway-secrets' at pod start:<br/>• BLS_API_KEYS  (gateway inbound auth)<br/>• LITELLM_MASTER_KEY  (gateway→LiteLLM)<br/>• OLLAMA_ENDPOINT  (LiteLLM backend addr)
+
     Caller->>Ingress: POST /v1/chat/completions<br/>Authorization: Bearer <key>
     Ingress->>FastAPI: route to gateway service
-    FastAPI->>Auth: validate Bearer token
-    alt invalid / missing token
-        Auth-->>Caller: 401 / 403
+    FastAPI->>Auth: validate Bearer token<br/>(token ∈ BLS_API_KEYS?)
+    alt missing token
+        Auth-->>Caller: 401 {"detail":"Missing Bearer token"}
+    else invalid token
+        Auth-->>Caller: 403 {"detail":"Invalid API key"}
     else valid
         Auth-->>FastAPI: pass
-        FastAPI->>LiteLLM: POST /v1/chat/completions<br/>(forward body + Authorization)
+        FastAPI->>LiteLLM: POST /v1/chat/completions<br/>(forward body + LITELLM_MASTER_KEY)
         LiteLLM->>Cache: GET cached completion<br/>(exact-match key)
         alt cache hit
             Cache-->>LiteLLM: cached completion
         else cache miss
             Note over LiteLLM: routing_strategy: least-busy<br/>(num_retries: 2, timeout: 120s)
             alt model = local/*
-                LiteLLM->>Ollama: HTTP /api/chat<br/>(over homelab LAN)
+                LiteLLM->>Ollama: HTTP /api/chat<br/>via os.environ/OLLAMA_ENDPOINT
                 Ollama-->>LiteLLM: completion
             else model = azure/*
                 LiteLLM->>AOAI: HTTPS /openai/deployments/...
@@ -44,7 +48,12 @@ sequenceDiagram
 %% Caption — supports BLS-PLATFORM-ENGINEERING-GUIDE.md §4 (P4 LLM gateway).
 %% Shows the full request path: ingress → FastAPI auth → LiteLLM router (with
 %% cache-hit / cache-miss branch) → backend selection (Ollama on the Proxmox
-%% host vs cloud provider) → response. The async scrape edge from Prometheus
-%% is rendered separately because it is not part of the request path — it is
-%% an out-of-band observation, and conflating the two is the most common
+%% host vs cloud provider) → response. Three runtime credentials are sourced
+%% from a SealedSecret committed to git encrypted: BLS_API_KEYS gates inbound
+%% auth, LITELLM_MASTER_KEY authorises gateway→LiteLLM, and OLLAMA_ENDPOINT
+%% is substituted into LiteLLM's `api_base` via its `os.environ/VAR` syntax —
+%% so no homelab-internal address is committed in plaintext. Auth failures
+%% return a typed JSON envelope (401 missing-token / 403 invalid-key). The
+%% async scrape edge from Prometheus is rendered separately because it is
+%% not part of the request path — conflating the two is the most common
 %% diagrammatic mistake on observability-aware services.
