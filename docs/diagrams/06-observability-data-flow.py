@@ -1,38 +1,36 @@
 """
 06 — Observability data flow (P5).
 
-Topology view of the Project 5 observability stack. The left column
-holds the nine ServiceMonitor scrape sources (eight inside the
-`monitoring` namespace plus one across the namespace boundary in
-`llm-gateway`). The centre column holds the Prometheus stack — the
-StatefulSet itself, the prometheus-operator that watches CRDs, and
-the ServiceMonitor and PrometheusRule CRDs that configure the scrapes
-and the rule evaluator respectively. The right column holds the data
-consumers — Grafana for dashboard reads, AlertManager for routing
-(rendered as deferred — the chart values disable Alertmanager on this
-deployment; rules fire to the Prometheus UI only), and the operator
-human reading via `kubectl port-forward` (the only inbound surface,
-since this homelab cluster runs `--disable traefik` and there is no
-public ingress for any observability UI).
+Top-to-bottom data flow for the kube-prometheus-stack:
 
-The cluster-egress story for this stack is deliberately small:
-Prometheus does not scrape across the cluster boundary, the operator
-talks only to the kube-apiserver, and Grafana has no external
-datasources configured. The diagram therefore has no external nodes —
-P5's observability is in-cluster end to end.
+  Top row:    nine ServiceMonitor scrape sources arranged horizontally.
+              Eight live in the `monitoring` namespace; one (`llm-gateway`)
+              crosses the namespace boundary and is admitted through the
+              ADR-009 NetworkPolicy by the `gateway-policy` ingress rule.
 
-What this diagram deliberately does not show: log aggregation (no
-Loki — deferred per bridge §4.5), distributed tracing (no Tempo — no
-workload emits OpenTelemetry spans cleanly today), and custom
-PrometheusRule resources (none today — the ~30 rules visible in the
-cluster are the chart's defaults; workload-specific rules are PR-E
-scope).
+  Middle row: the Prometheus stack — Prometheus (StatefulSet), the
+              prometheus-operator, and the ServiceMonitor + PrometheusRule
+              CRDs that the operator reconciles into scrape and rule
+              configuration. CRD count notes flag the deferred work
+              (PR-E: workload-specific rules).
 
-Supports: BLS-PLATFORM-ENGINEERING-GUIDE.md §4 (P5 observability +
+  Bottom row: data consumers. Grafana for dashboards (PromQL queries).
+              AlertManager rendered as disabled — the chart values turn
+              it off in this deployment and rules fire to the Prometheus
+              UI only; re-enable is PR-E scope. The human operator reads
+              via `kubectl port-forward` — the only inbound surface on
+              this cluster (it runs `--disable traefik`, no Ingress
+              controller).
+
+What this diagram deliberately doesn't show: log aggregation (no Loki
+— see bridge §4.5), distributed tracing (no Tempo), and workload-specific
+PrometheusRule resources (the ~30 visible rules are chart defaults).
+The scrape-edge label "scrape /metrics every 30s" is set once on the
+source cluster's title rather than repeated nine times on each edge.
+
+Supports: BLS-PLATFORM-ENGINEERING-GUIDE.md §4.5 (P5 observability +
 security depth view); ADR-006 (observability GitOps deployment);
-ADR-009 (NetworkPolicy scope — the llm-gateway scrape edge crosses
-the NetworkPolicy-enforced namespace boundary, allowed by the
-gateway-policy ingress rule).
+ADR-009 (NetworkPolicy scope).
 
 Stable prefix: 06. Filename and prefix must not change once committed
 — external references depend on it (per docs/diagrams/README.md
@@ -51,96 +49,113 @@ from diagrams.programming.framework import Fastapi
 
 graph_attr = {
     "splines": "spline",
-    "fontsize": "16",
+    "fontsize": "18",
     "labelloc": "t",
+    "rankdir": "TB",
+    "nodesep": "0.5",
+    "ranksep": "1.2",
+    "pad": "0.6",
+}
+
+source_cluster_attr = {
+    "rankdir": "LR",   # lay the 9 source icons out in a horizontal row
+    "fontsize": "14",
+    "style": "rounded,filled",
+    "fillcolor": "#f0f9ff",
+}
+
+prom_cluster_attr = {
+    "fontsize": "14",
+    "style": "rounded,filled",
+    "fillcolor": "#fef3c7",
+}
+
+consumer_cluster_attr = {
     "rankdir": "LR",
-    "nodesep": "0.6",
-    "ranksep": "1.0",
+    "fontsize": "14",
+    "style": "rounded,filled",
+    "fillcolor": "#f0fdf4",
 }
 
 with Diagram(
     "P5 — Observability data flow",
     filename="06-observability-data-flow",
     show=False,
-    direction="LR",
+    direction="TB",
     graph_attr=graph_attr,
 ):
-    # ---------------- scrape sources (left) ----------------
-    with Cluster("Scrape targets — monitoring namespace"):
+    # ---------------- TOP: scrape sources (single cluster, horizontal) ----------------
+    # Scrape edge label lives in the cluster title — the nine individual
+    # edges then carry no repeated text.
+    with Cluster(
+        "9 scrape targets — Prometheus scrapes /metrics every 30s",
+        graph_attr=source_cluster_attr,
+    ):
         t_apiserver = APIServer("apiserver")
-        t_coredns = Service("coredns\n(kube-system)")
+        t_coredns = Service("coredns")
         t_kubelet = Kubelet("kubelet\n(per node)")
-        t_ksm = Pod("kube-state-metrics")
-        t_nodeexp = Pod("node-exporter\n(DaemonSet)")
-        t_prom_self = Pod("prometheus\n(self-scrape)")
-        t_operator_self = Pod("operator\n(self-scrape)")
+        t_ksm = Pod("kube-state-\nmetrics")
+        t_nodeexp = Pod("node-exporter\n(per node)")
+        t_prom_self = Pod("prometheus\n(self)")
+        t_op_self = Pod("operator\n(self)")
+        t_grafana_self = Grafana("grafana\n(self)")
+        t_gateway = Fastapi("llm-gateway\n(cross-ns,\nadmitted by\nADR-009)")
 
-    with Cluster("Scrape target — llm-gateway namespace"):
-        t_gateway = Fastapi("llm-gateway\n(/metrics on :8000)")
+    sources = [
+        t_apiserver, t_coredns, t_kubelet, t_ksm, t_nodeexp,
+        t_prom_self, t_op_self, t_grafana_self, t_gateway,
+    ]
 
-    # ---------------- Prometheus stack (centre) ----------------
-    with Cluster("Prometheus stack — monitoring namespace"):
-        prom = Prometheus("Prometheus\n(StatefulSet, retention 7d / 5GB)")
-        operator = PrometheusOperator("prometheus-operator\n(Deployment)")
+    # ---------------- MIDDLE: Prometheus stack (flat, no sub-cluster) ----------------
+    with Cluster(
+        "Prometheus stack — monitoring namespace",
+        graph_attr=prom_cluster_attr,
+    ):
+        prom = Prometheus("Prometheus\n(StatefulSet · 7d / 5GB)")
+        operator = PrometheusOperator("prometheus-operator")
+        sm_crd = CRD("ServiceMonitor\n× 9")
+        rule_crd = CRD("PrometheusRule\n× ~30 chart defaults\n(workload rules → PR-E)")
 
-        with Cluster("CRDs (declarative config)"):
-            sm_crd = CRD("ServiceMonitor\n(× 9 in cluster)")
-            rule_crd = CRD("PrometheusRule\n(× ~30 chart defaults;\nworkload rules deferred → PR-E)")
-
-    # ---------------- consumers (right) ----------------
-    with Cluster("Consumers"):
-        grafana = Grafana("Grafana\n(dashboards;\nalso self-scraped, see edge)")
+    # ---------------- BOTTOM: consumers (single cluster, horizontal) ----------------
+    with Cluster(
+        "Consumers",
+        graph_attr=consumer_cluster_attr,
+    ):
+        grafana = Grafana("Grafana\n(dashboards)")
         alertmanager = Pod(
-            "AlertManager\n(DISABLED in chart values —\nrules fire to Prom UI only;\nre-enable tracked → PR-E)"
+            "AlertManager\n(disabled in chart values —\nrules fire to Prom UI only;\nPR-E scope)"
         )
-        operator_human = User("Operator\n(kubectl port-forward —\nthe only inbound surface)")
+        operator_human = User(
+            "Operator\n(kubectl port-forward —\nonly inbound surface;\ncluster has --disable traefik)"
+        )
 
-    # ---------------- scrape edges ----------------
-    # All scrape sources land in Prometheus on dotted edges (the
-    # convention used in diagrams 01 and 03 for observe/scrape flows).
-    scrape_style = {"style": "dotted", "color": "darkgreen"}
-    for source in [t_apiserver, t_coredns, t_kubelet, t_ksm,
-                   t_nodeexp, t_prom_self, t_operator_self, t_gateway]:
-        source >> Edge(label="scrape /metrics\nevery 30s", **scrape_style) >> prom
+    # ---------------- edges ----------------
+    # 1) Nine scrape edges — no per-edge label (cluster title carries the
+    #    text). Dotted green, the convention for scrape/observe flows.
+    scrape_edge = Edge(style="dotted", color="darkgreen")
+    for source in sources:
+        source >> scrape_edge >> prom
 
-    # Grafana is also a scrape target (it exposes its own /metrics).
-    # Rendered separately so the right-column placement reads cleanly.
-    grafana >> Edge(label="scrape\n(self)", **scrape_style) >> prom
-
-    # ---------------- CRD-driven configuration ----------------
-    # Operator watches CRDs and reconciles Prometheus's scrape and rule
-    # configuration from them. Rendered dashed because the relationship
-    # is configuration-time, not request-time.
-    config_edge = Edge(style="dashed", color="darkblue")
+    # 2) Operator watches CRDs; CRDs configure Prometheus. Dashed blue —
+    #    configuration-time, not request-time.
     operator >> Edge(label="watches", style="dashed", color="darkblue") >> sm_crd
     operator >> Edge(label="watches", style="dashed", color="darkblue") >> rule_crd
     sm_crd >> Edge(label="configures\nscrapes", style="dashed", color="darkblue") >> prom
     rule_crd >> Edge(label="configures\nrules", style="dashed", color="darkblue") >> prom
 
-    # ---------------- data-out edges ----------------
+    # 3) Prometheus → consumers.
     prom >> Edge(label="PromQL queries", color="darkorange") >> grafana
-
-    # Alertmanager is rendered with a deliberately greyed/dashed edge
-    # to signal "would route, but disabled in this deployment". This
-    # is the gap PR-E closes (workload-specific rules + an explicit
-    # scope decision on whether to re-enable Alertmanager).
     prom >> Edge(
         label="would route fires\n(disabled — PR-E)",
         style="dashed",
         color="grey",
     ) >> alertmanager
 
-    # Operator human reads via kubectl port-forward. This bypasses
-    # NetworkPolicy entirely (apiserver-mediated tunnel, not pod-to-pod
-    # IP traffic), which is why the observability UIs are reachable
-    # despite the cluster running no public Ingress.
+    # 4) Operator-human reads via kubectl port-forward — bypasses
+    #    NetworkPolicy entirely (apiserver-mediated tunnel, not pod-to-pod
+    #    IP traffic). Rendered as a single fan-out to both UIs.
     operator_human >> Edge(
-        label="kubectl port-forward",
+        label="port-forward",
         style="dotted",
         color="darkred",
-    ) >> grafana
-    operator_human >> Edge(
-        label="kubectl port-forward",
-        style="dotted",
-        color="darkred",
-    ) >> prom
+    ) >> [grafana, prom]
