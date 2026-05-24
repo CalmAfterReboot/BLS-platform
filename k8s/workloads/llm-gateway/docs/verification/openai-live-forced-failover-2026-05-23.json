@@ -1,0 +1,32 @@
+{
+  "captured_at_utc": "2026-05-23T23:52:31+00:00",
+  "extras": {
+    "forced_condition": {
+      "expected_upstream_error": "model_not_found (404)",
+      "fallback_alias": "gpt-4o-mini-fallback",
+      "fallback_model": "openai/gpt-4o-mini",
+      "primary_alias": "bad-primary",
+      "primary_model": "openai/does-not-exist-2026-bls-test"
+    }
+  },
+  "openai_model_env": "gpt-4o-mini",
+  "request": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "Reply with the single word: pong",
+        "role": "user"
+      }
+    ],
+    "model": "bad-primary"
+  },
+  "response": {
+    "attempts": 2,
+    "completion": "Pong",
+    "failover_occurred": true,
+    "finish_reason": "stop",
+    "latency_ms": 2638.359661999857,
+    "model_used": "gpt-4o-mini-2024-07-18"
+  },
+  "scenario": "forced-failover"
+}

@@ -1,0 +1,15 @@
+[project]
+name = "bls-llm-gateway-tests"
+version = "0.1.0"
+description = "Live verification tests for the BLS LLM Gateway (LiteLLM via FastAPI)."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "live: hits real upstream providers (e.g. OpenAI) via LiteLLM. Skipped by default; opt in with `pytest -m live`. Requires OPENAI_API_KEY in .env.",
+]
+addopts = "-m 'not live'"
+
+[tool.ruff]
+line-length = 100
