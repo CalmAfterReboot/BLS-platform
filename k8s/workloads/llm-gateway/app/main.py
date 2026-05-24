@@ -29,4 +29,3 @@ app.include_router(completions.router, prefix="/v1")
 @app.get("/healthz")
 async def health():
     return {"status": "ok", "service": "bls-llm-gateway"}
-# Sat 09 May 2026 12:45:01 AM BST

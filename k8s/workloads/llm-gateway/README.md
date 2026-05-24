@@ -50,7 +50,6 @@ that should not restart when either of the other two does.
 k8s/workloads/llm-gateway/
 ├── Chart.yaml              # Helm metadata (name, version, appVersion)
 ├── values.yaml             # Default values (k3s homelab)
-├── values-aks.yaml         # AKS overrides — replica count, service type
 ├── templates/              # Kubernetes manifests templated by Helm
 │   ├── configmap-litellm.yaml      # LiteLLM model_list + router_settings
 │   ├── deployment-gateway.yaml     # FastAPI proxy Deployment
@@ -80,11 +79,6 @@ unchanged Kubernetes manifests.
 # k3s defaults (homelab)
 helm template llm-gateway k8s/workloads/llm-gateway/ \
   -f k8s/workloads/llm-gateway/values.yaml --namespace llm-gateway
-
-# AKS overrides
-helm template llm-gateway k8s/workloads/llm-gateway/ \
-  -f k8s/workloads/llm-gateway/values.yaml \
-  -f k8s/workloads/llm-gateway/values-aks.yaml --namespace llm-gateway
 ```
 
 Lint and dry-run install:
