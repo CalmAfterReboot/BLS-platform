@@ -30,15 +30,6 @@ ssh_client_alive_interval: 300
 ssh_client_alive_count_max: 2
 
 ufw_allowed_ports:
-  - { port: "22", proto: "tcp" }
-  - { port: "6443", proto: "tcp" }
-  - { port: "2379", proto: "tcp" }
-  - { port: "2380", proto: "tcp" }
-  - { port: "10250", proto: "tcp" }
-  - { port: "8472", proto: "udp" }
-  - { port: "51820", proto: "udp" }
-
-ufw_allowed_ports:
   - { port: "22", proto: "tcp", comment: "SSH" }
   - { port: "6443", proto: "tcp", comment: "k3s API server" }
   - { port: "2379", proto: "tcp", comment: "etcd client" }
@@ -46,19 +37,6 @@ ufw_allowed_ports:
   - { port: "10250", proto: "tcp", comment: "kubelet" }
   - { port: "8472", proto: "udp", comment: "flannel VXLAN" }
   - { port: "51820", proto: "udp", comment: "WireGuard" }
-
-sysctl_settings:
-  - { name: "net.ipv4.ip_forward", value: "1" }
-  - { name: "net.ipv4.conf.all.send_redirects", value: "0" }
-  - { name: "net.ipv4.conf.default.send_redirects", value: "0" }
-  - { name: "net.ipv4.conf.all.accept_redirects", value: "0" }
-  - { name: "net.ipv4.conf.default.accept_redirects", value: "0" }
-  - { name: "net.ipv4.conf.all.log_martians", value: "1" }
-  - { name: "net.ipv4.tcp_syncookies", value: "1" }
-  - { name: "kernel.dmesg_restrict", value: "1" }
-  - { name: "kernel.kptr_restrict", value: "2" }
-  - { name: "net.bridge.bridge-nf-call-iptables", value: "1" }
-  - { name: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
 
 sysctl_settings:
   net.ipv4.ip_forward: "1"
