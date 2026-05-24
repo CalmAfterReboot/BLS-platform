@@ -51,3 +51,12 @@ networkPolicies:
   # AKS cluster) via an ApplicationSet values overlay.
   podCIDR: 10.42.0.0/16
   serviceCIDR: 10.43.0.0/16
+
+prometheusRules:
+  # Set to false if deploying the chart to a cluster where the
+  # prometheus-operator CRDs are not installed (the PrometheusRule
+  # render would fail otherwise). Three workload rules ship by default:
+  # LLMGatewayDown, LLMGatewayHighErrorRate, LLMGatewayHighLatency.
+  # Per ADR-010, the rules fire to the Prometheus UI only — Alertmanager
+  # is disabled in this deployment, there is no external paging.
+  enabled: true

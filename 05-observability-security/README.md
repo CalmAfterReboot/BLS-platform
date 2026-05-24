@@ -25,12 +25,13 @@ that are kept with the resources they configure.
 6. [Phase 2 — kube-prometheus-stack via multi-source ArgoCD Application](#phase-2--kube-prometheus-stack-via-multi-source-argocd-application)
 7. [Phase 3 — Cross-namespace ServiceMonitor for the LLM gateway](#phase-3--cross-namespace-servicemonitor-for-the-llm-gateway)
 8. [Phase 4 — NetworkPolicy baseline on `llm-gateway`](#phase-4--networkpolicy-baseline-on-llm-gateway)
-9. [Things to know (operational history)](#things-to-know-operational-history)
-10. [Key decisions (and ADR links)](#key-decisions-and-adr-links)
-11. [Observability of the observability](#observability-of-the-observability)
-12. [Known gaps (tracked work)](#known-gaps-tracked-work)
-13. [Verification](#verification)
-14. [Project history](#project-history)
+9. [Phase 5 — Workload `PrometheusRule` for the LLM gateway](#phase-5--workload-prometheusrule-for-the-llm-gateway)
+10. [Things to know (operational history)](#things-to-know-operational-history)
+11. [Key decisions (and ADR links)](#key-decisions-and-adr-links)
+12. [Observability of the observability](#observability-of-the-observability)
+13. [Known gaps (tracked work)](#known-gaps-tracked-work)
+14. [Verification](#verification)
+15. [Project history](#project-history)
 
 ---
 
@@ -281,9 +282,11 @@ it, the first install fails with an annotation size error.
   enabled would produce persistent `ScrapeError` targets in the
   Prometheus UI.
 - `alertmanager.enabled: false` — the chart's Alertmanager is
-  **disabled in this deployment.** Re-enable and the routing decision
-  are tracked as [PR-E scope](#known-gaps-tracked-work); rules
-  currently fire to the Prometheus UI only.
+  **disabled in this deployment by deliberate decision** recorded in
+  [ADR-010](../docs/adr/ADR-010-alertmanager-scope.md). Workload
+  `PrometheusRule` resources ship (see Phase 5) and fire to the
+  Prometheus UI's `/alerts` endpoint only; no external paging. Re-enable
+  is one values change away if a real on-call audience appears.
 - `grafana.admin.existingSecret: grafana-admin-credentials` — the
   Grafana admin password lives in
   [`k8s/workloads/monitoring/grafana-admin-secret.yaml`](../k8s/workloads/monitoring/grafana-admin-secret.yaml)
@@ -376,6 +379,60 @@ When disabled the chart renders zero NetworkPolicy resources. The chart
 
 ---
 
+## Phase 5 — Workload `PrometheusRule` for the LLM gateway
+
+Three workload-specific rules ship with the chart at
+[`k8s/workloads/llm-gateway/templates/prometheusrules.yaml`](../k8s/workloads/llm-gateway/templates/prometheusrules.yaml),
+gated by `.Values.prometheusRules.enabled` (default `true`):
+
+| Rule | Expression (summary) | For | Severity |
+|---|---|---|---|
+| `LLMGatewayDown` | `up{namespace="llm-gateway", service="llm-gateway-service"} == 0` | 5m | critical |
+| `LLMGatewayHighErrorRate` | 5xx-ratio over total > 5% | 10m | warning |
+| `LLMGatewayHighLatency` | p99 latency on non-LLM endpoints > 1s | 10m | warning |
+
+Notes:
+
+- **Status labels are bucketed** (`"2xx"`, `"5xx"`) by the
+  `prometheus-fastapi-instrumentator` 7.1.0 default mapping — the
+  error-rate rule filters on `status="5xx"` not on raw HTTP codes like
+  `status="500"`.
+- **The latency rule excludes `/v1/chat/completions`** via
+  `handler!="/v1/chat/completions"`. LLM inference is legitimately slow
+  (multi-second generations are normal); a slow fast-path
+  (`/healthz`, `/metrics`) signals event-loop contention, GC pressure,
+  or container resource starvation — the real diagnostic signal.
+- **Rules fire to the Prometheus UI only.** Alertmanager stays
+  disabled per [ADR-010](../docs/adr/ADR-010-alertmanager-scope.md).
+  This is the deliberate scope statement, not an oversight.
+
+### Why the rules ship anyway if no one pages on them
+
+Workload rules carry diagnostic value even without external routing.
+The PromQL expressions themselves are portfolio evidence that the
+architect understands the metric model (which metrics
+`prometheus-fastapi-instrumentator` exposes, which labels are stable,
+which handler to exclude and why). A reviewer reading
+`prometheusrules.yaml` sees what the architect believes the
+load-bearing failure modes are. The Prometheus UI's `/alerts` view
+becomes the authoritative "what's wrong right now" surface for the
+operator on the workstation. See
+[ADR-010 Rationale](../docs/adr/ADR-010-alertmanager-scope.md#rationale)
+for the full reasoning.
+
+### Re-enable path (if an audience appears)
+
+1. `alertmanager.enabled: false → true` in
+   [`values/kube-prometheus-stack.yaml`](values/kube-prometheus-stack.yaml).
+2. Add a `receivers:` block under `alertmanager.config` and a
+   `route:` block matching the desired severity labels.
+3. ArgoCD sync.
+
+The rules themselves do not change. ADR-010 documents the trigger
+conditions under which a future ADR should supersede this one.
+
+---
+
 ## Things to know (operational history)
 
 These notes exist so the next operator does not re-discover the same
@@ -460,6 +517,8 @@ problems. Each entry is a real gotcha encountered during P5 bring-up.
 | Sealed Secrets over SOPS / External Secrets Operator | SOPS needs out-of-band key distribution; ESO needs an external secret store (Vault, Azure Key Vault, etc.) which a self-funded homelab does not justify. Sealed Secrets self-contained in-cluster with one secret to back up. | [runbook](../docs/runbooks/sealed-secrets-controller.md) |
 | NetworkPolicy on `llm-gateway` only; `monitoring` and `sealed-secrets` deferred | Cost of getting Prometheus's egress right under `serviceMonitorSelector: {}` is high and failure mode is silent. Sealed-secrets controller's high-value secret is at-rest in etcd, not in transit. | [ADR-009](../docs/adr/ADR-009-networkpolicy-scope.md) |
 | Per-pod NetworkPolicies over per-flow | Readable unit is "what can this pod do?" rather than "what flows are permitted on this edge?" — easier to review, easier to extend when a pod is added. | [ADR-009](../docs/adr/ADR-009-networkpolicy-scope.md) |
+| Workload `PrometheusRule` ships; Alertmanager stays disabled (rules fire to Prometheus UI only) | Rules carry diagnostic value without external routing. Paging into a void with no on-call rotation is operational theatre — a page no one acts on devalues the alert in the operator's mind and presents a false picture of maturity. Re-enable is one values change away if a real audience appears. | [ADR-010](../docs/adr/ADR-010-alertmanager-scope.md) |
+| Latency rule excludes `/v1/chat/completions` handler | LLM inference is legitimately slow (multi-second generations are normal). A slow fast-path (`/healthz`, `/metrics`) signals event-loop contention or resource starvation — the real diagnostic signal. | [ADR-010](../docs/adr/ADR-010-alertmanager-scope.md) |
 
 ---
 
@@ -473,10 +532,13 @@ SLOs, kubelet liveness, node-exporter resource saturation, kube-state-
 metrics object-count anomalies, and the Prometheus and operator
 internals themselves.
 
-What's missing: workload-specific rules
-(`LLMGatewayDown`, error-rate thresholds, etc.) and an enabled
-Alertmanager with somewhere meaningful to route to. Both are
-[PR-E scope](#known-gaps-tracked-work).
+Workload rules now ship alongside (see [Phase 5](#phase-5--workload-prometheusrule-for-the-llm-gateway)
+above): `LLMGatewayDown`, `LLMGatewayHighErrorRate`, and
+`LLMGatewayHighLatency`. They are evaluated by Prometheus on the
+standard 30-second interval and fire to the Prometheus UI's `/alerts`
+endpoint. Alertmanager is intentionally **not** installed — see
+[ADR-010](../docs/adr/ADR-010-alertmanager-scope.md) for the recorded
+scope decision.
 
 Grafana ships pre-loaded with the standard kube-prometheus-stack
 dashboards. No custom dashboard JSON is committed to this project
@@ -490,15 +552,23 @@ roadmap; not blocking.
 
 | Gap | Status | Tracker |
 |---|---|---|
-| Alertmanager disabled in chart values; rules fire to Prometheus UI only | Deliberate — homelab has no on-call rotation, paging into a void is theatre | PR-E (decision: keep disabled with explicit scope statement, OR enable with self-hosted ntfy/Telegram) |
-| No workload-specific `PrometheusRule` resources (the ~30 in cluster are chart defaults) | Deliberate scope of P5 closing pass | PR-E (add `LLMGatewayDown`, error-rate, latency rules) |
 | No TLS on observability UIs — all access via `kubectl port-forward` | Deliberate — cluster runs `--disable traefik`, no Ingress controller installed | Week 4 — paired cert-manager + Traefik IngressRoute work |
 | NetworkPolicy scope limited to `llm-gateway` | Deliberate, reasoning recorded | [ADR-009](../docs/adr/ADR-009-networkpolicy-scope.md) — revisit if observability gateway introduced |
+| Alertmanager disabled; rules fire to Prometheus UI only | Deliberate, reasoning recorded | [ADR-010](../docs/adr/ADR-010-alertmanager-scope.md) — revisit if a real on-call audience appears |
 | No log aggregation (Loki) | Deliberate — homelab has no high-availability persistent storage; workloads here don't have enough pods to tail | Bridge §4.5 — "what I deliberately didn't build" |
 | No distributed tracing (Tempo) | Deliberate — no workload emits OpenTelemetry spans cleanly today (LiteLLM does not) | Bridge §4.5 |
 | Full restore-from-backup test for sealed-secrets master key | Not routinely executed (controller-restart test passes — see runbook) | Next cluster rebuild (runbook §Known gaps) |
 | Grafana dashboard JSON not committed to Git | Roadmap (not blocking) | Future PR |
 | Image-digest pinning for upstream charts | Deferred (chart-version pin is auditable; digest is belt-and-braces) | Roadmap |
+
+### Closed in the P5 closing pass
+
+| Gap | Resolution |
+|---|---|
+| No workload-specific `PrometheusRule` resources | [`prometheusrules.yaml`](../k8s/workloads/llm-gateway/templates/prometheusrules.yaml) ships 3 rules (`LLMGatewayDown`, `LLMGatewayHighErrorRate`, `LLMGatewayHighLatency`). Status labels filtered as `"2xx"`/`"5xx"` per the FastAPI instrumentator's bucketing; latency rule excludes `/v1/chat/completions` because LLM inference is legitimately slow. See [Phase 5](#phase-5--workload-prometheusrule-for-the-llm-gateway). |
+| Alertmanager re-enable / paging decision | Explicit scope recorded in [ADR-010](../docs/adr/ADR-010-alertmanager-scope.md): keep disabled, rules-only fire to Prometheus UI. Re-enable is one values change away if an on-call audience appears; the ADR documents the trigger conditions for a future ADR to supersede this one. |
+| `[Architect fills in]` markers in bridge document §4.5 (P5 depth view) | Filled in PR #22: multi-source-over-umbrella as the load-bearing decision, Loki as the deliberate didn't-build. |
+| P5 README does not exist | Created in this closing pass (#23 + iterations). |
 
 ---
 
@@ -573,6 +643,23 @@ kill $PF
 # 7 — Sealed Secrets controller restart preserves decryption capability.
 #     Full procedure (with pre-flight sync-policy suspension) is in:
 #     docs/runbooks/sealed-secrets-controller.md
+
+# 8 — Workload PrometheusRules loaded and visible in Prometheus.
+kubectl -n llm-gateway get prometheusrule llm-gateway
+# Expected: NAME llm-gateway, AGE > 0.
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090 &
+PF=$!; sleep 2
+curl -s http://localhost:9090/api/v1/rules \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); \
+      [print(g['name'], '->', [r['name'] for r in g['rules']]) \
+       for g in d['data']['groups'] if g['name']=='llm-gateway.rules']"
+kill $PF
+# Expected:
+#   llm-gateway.rules -> ['LLMGatewayDown', 'LLMGatewayHighErrorRate', 'LLMGatewayHighLatency']
+
+# 9 — Alertmanager is intentionally NOT installed (per ADR-010 scope).
+kubectl -n monitoring get pods -l app.kubernetes.io/name=alertmanager 2>&1
+# Expected: No resources found in monitoring namespace.
 ```
 
 ---
@@ -592,17 +679,27 @@ P5 came together in three stages:
    requirement were discovered during this phase and recorded in
    ADR-006's Rationale section, not as warts.
 
-3. **P5 hardening + closing pass** (the PR sequence that produced this
-   README):
+3. **P5 hardening + closing pass** (a series of PRs that produced and
+   then refined the current shape):
    - PR #18 — NetworkPolicy baseline on `llm-gateway` + ADR-009
-   - PR #19 — observability data-flow diagram (06)
-   - PR #20 — this README
+   - PR #23 — observability data-flow diagram (06) + this README
+     (recovered from the #19/#20 stack after a squash-merge SHA
+     mismatch caused GitHub to auto-close them)
+   - PR #21 — bridge document relabel: "load-bearing decision" replaces
+     the previous "decision that made this senior" bullet label across
+     §4.1–§4.5
+   - PR #22 — bridge document §4.5 architect-voice fills (multi-source
+     decision; Loki deferred); diagram-06 + ADR-009 reading-path
+     links activated
+   - PR #24 — diagram 06 + 07 readability redesign (06: TB layout
+     with single shared scrape edge label, soft cluster fills;
+     07: 6 IN / 5 OUT items, uniform 3-5 word labels, invisible
+     edges forcing the two-column stack)
+   - PR-E — workload `PrometheusRule` resources + ADR-010 Alertmanager
+     scope (this stage). Closes the last open P5 gap.
 
-PR-D will complete bridge document §4.5 (the two `[Architect fills
-in]` markers in
-[`BLS-PLATFORM-ENGINEERING-GUIDE.md`](../BLS-PLATFORM-ENGINEERING-GUIDE.md)).
-PR-E will close the workload-rule + Alertmanager-scope gap. cert-manager
-+ TLS is paired with the Traefik IngressRoute work in Week 4.
+cert-manager + TLS for the observability UIs is paired with the
+Traefik IngressRoute work in Week 4 — not P5 scope.
 
 The forensic detail of any specific bring-up issue (e.g., the etcd
 member-config corruption from a mistyped k3s join command — see
