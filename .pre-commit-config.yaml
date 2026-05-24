@@ -5,6 +5,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        args: ['--allow-multiple-documents']
         exclude: '^k8s/.*templates/.*\.yaml$'
       - id: check-added-large-files
       - id: check-merge-conflict
@@ -18,7 +19,8 @@ repos:
         exclude: |
           (?x)^(
             \.secrets\.baseline|
-            k8s/workloads/llm-gateway/docs/verification/.*
+            k8s/workloads/llm-gateway/docs/verification/.*|
+            k8s/workloads/.*-secret\.yaml
           )$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
