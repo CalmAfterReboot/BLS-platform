@@ -64,7 +64,7 @@ None of the proposed actions in this audit would lose unrecoverable context. The
 ## Notes on what is **not** in the audit (Week 2 additions)
 
 - **`docs/diagrams/00-system-context.mmd`, `07-scope-boundary.mmd`** — Week 1 outputs, both current. The catalogue in `docs/diagrams/README.md` already names them and they are referenced from bridge document §1 and §6. No action.
-- **`BLS-PLATFORM-ENGINEERING-GUIDE.md`** — Section 4 placeholders are being filled in this PR (TASK 7). The architect-voice rows (`The decision that made this senior:`, `What I deliberately didn't build:`) remain explicitly blank with `[Architect fills in]` markers per the Week 1 design. Not obsolete; in flight.
+- **`BLS-PLATFORM-ENGINEERING-GUIDE.md`** — Section 4 placeholders are being filled in this PR (TASK 7). The architect-voice rows (`Load-bearing decision:`, `What I deliberately didn't build:`) remain explicitly blank with `[Architect fills in]` markers per the Week 1 design. Not obsolete; in flight.
 - **`docs/plan-v4/concept-tool-mapping.md`** — current. Will be extended in Week 3 per the documented Week 3 prompt; not touched this week.
 
 ## Failure-mode flag (Week 2)
