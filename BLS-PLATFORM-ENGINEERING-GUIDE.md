@@ -178,17 +178,17 @@ The decisions are recorded. The commits are conventional. The hooks gate the com
 
 A portfolio is as much about what is not in it as what is. The following are choices, not gaps:
 
-**No multi-tenant production workload.** The cluster runs the architect's own workloads. There is no claim of multi-tenant operations, RBAC partitioning across customers, or quota-and-noisy-neighbour mitigation at scale. A reader looking for "multi-tenant SaaS platform operator" should look elsewhere or treat that as the next surface to expand into.
+**No multi-tenant production workload.** The cluster runs the architect's own workloads. There is no claim of multi-tenant operations, RBAC partitioning across customers, or quota-and-noisy-neighbour mitigation at scale. Multi-tenant operations are not in scope; that surface would be the next expansion.
 
-**No claim of AWS or GCP production experience inside this repository.** The Terraform stack here is Azure-first; GCP parity is named on the P6 roadmap and has not shipped. AWS exposure exists outside this repository in the architect's MSP work but is not demonstrated here. If a role requires AWS production depth as a hard requirement, this repository is not the artefact that proves it.
+**No claim of AWS or GCP production experience inside this repository.** The Terraform stack here is Azure-first; GCP parity is named on the P6 roadmap and has not shipped. AWS exposure exists outside this repository in the architect's MSP work but is not demonstrated here. AWS production depth is not a property this repository proves.
 
-**No claim of platform-team-of-N operations.** This is a one-architect portfolio. The "platform engineering team" experience this repository demonstrates is the architect operating across multiple environments and projects against a constraint set they set — not coordinating across a team of platform engineers. Roles that ask for "experience leading a platform team" should weight other signals.
+**No claim of platform-team-of-N operations.** This is a one-architect portfolio. What this repository demonstrates is the architect operating across multiple environments and projects against a constraint set they set — not coordinating across a team of platform engineers. Cross-team coordination is not a signal this portfolio surfaces.
 
 **No claim that AKS is currently running.** AKS was provisioned for the P3 multi-cluster demonstration and torn down to preserve the £60 Azure spend cap. The dangling registrations in ArgoCD are tracked transparently (PHASE-2-HANDOFF.md WU-5 — local-only). A rebuild decision is on the Plan-v4 calendar for Week 4; until then, the portfolio's AKS claim is "built once, evidence captured, torn down for cost discipline."
 
 **No claim that every WU is closed.** The Phase 2 hardening sprint has open work units (P5 README, audit logging on the cluster API server, AKS rebuild). Chart deduplication (WU-3) closed in Week 2; SealedSecret conversion for the LLM gateway plus removal of the homelab Ollama address from values.yaml (WU-4) closed on 2026-05-24. The remaining work is in flight; the handoff doc is honest about it. A closing portfolio that pretends every loose end is tied is a portfolio that cannot be trusted on the tied ones.
 
-**No claim of formal SRE on-call.** The architect's recovery work in this repository is real but not 24/7-on-call work. SRE roles requiring proven on-call rotation depth should look at the architect's MSP experience (not in this repository) rather than at this portfolio alone.
+**No claim of formal SRE on-call.** The recovery work in this repository is real but not 24/7-on-call work. Proven on-call rotation depth is MSP context outside this repository, not a property of the platform here.
 
 ## 7. How to verify
 
@@ -206,7 +206,7 @@ This portfolio is verifiable end-to-end. Every claim above drills down through t
 
 **Live cluster.** The k3s cluster, ArgoCD reconciler, and the LLM gateway have been running through the construction of this document. Specific verification commands (Prometheus target list, ArgoCD Application sync status, gateway `/metrics` reachability) are reproduced in the per-project READMEs and in the relevant ADR's Verification section.
 
-**Contact.** Through normal recruitment channels. The architect responds quickly to scoping questions, prefers a thirty-minute technical conversation before any take-home, and will share the gitignored handoff documents on request once a role is in scope.
+**Contact.** Through normal channels. Quick to respond to technical scoping questions; prefers a thirty-minute technical conversation before deeper engagement. Gitignored handoff documents are shared on request.
 
 ---
 
