@@ -31,6 +31,7 @@ An end-to-end, infrastructure-as-code provisioned Kubernetes HA cluster running 
 | **What it builds** | 3-node etcd control plane + 2-node k3s worker cluster |
 | **Hypervisor** | Proxmox VE on bare-metal homelab |
 | **IaC** | Terraform (`bpg/proxmox` 0.66.3) |
+| **k3s version** | Target pin: `v1.35.4+k3s1` (as observed on the live cluster — verify against upstream k3s release notes before bumping) |
 | **Configuration management** | Ansible (`node-hardening` role) |
 | **OS** | Ubuntu 24.04 LTS (cloud-init image) |
 | **Network** | VLAN-X — <homelab-subnet>.0/24 |
