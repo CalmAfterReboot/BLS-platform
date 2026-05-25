@@ -161,32 +161,16 @@ Each project has complete technical documentation:
 
 ---
 
-## What This Demonstrates
+## What this demonstrates
 
-**For hiring managers and recruiters:**
+The portfolio covers production-grade infrastructure built from first principles: a compliant cloud foundation with remote state and deny-by-default network posture, a hardened Kubernetes platform on commodity hardware, declarative multi-cluster delivery, a working application workload with observability wired through end to end, an encrypted secrets layer with a tested restart path, and namespace-scoped network isolation on the workload that handles authenticated requests. Architectural decisions are recorded as ADRs, operational procedures as runbooks, incident response as a written log. Every claim drills down to either code in the repository or a live resource in the cluster.
 
-This portfolio shows the ability to:
-
-- Design and build production-grade infrastructure from first principles
-- Implement enterprise security and governance patterns
-- Operate and troubleshoot distributed systems in production
-- Automate complex deployment workflows
-- Document architectural decisions and incident responses
-- Work across multiple platforms (Azure cloud, homelab infrastructure, Kubernetes)
-- Ship multiple complete projects to working, documented standards
-
-This isn't a hiring signal based on certifications or online course completion. It's evidence of real engineering capability demonstrated through working infrastructure.
-
-**For technical reviewers:**
-
-The codebase demonstrates proficiency in infrastructure-as-code, Kubernetes operations, security hardening, multi-environment deployment patterns, and incident recovery. Real incidents were encountered and solved. Architectural decisions were made deliberately and documented. The code is clean, the automation is reliable, and the systems work.
+The codebase exercises infrastructure-as-code (Terraform + Ansible), Kubernetes operations from etcd outward, security hardening at the bootstrap layer, multi-environment deployment patterns via GitOps, and incident recovery against real failures encountered during the build.
 
 ---
 
 ## Questions?
 
-Explore the projects directly on [GitHub](https://github.com/CalmAfterReboot/BLS-DevOps). Each project README has complete technical documentation, setup instructions, and troubleshooting guides.
+Explore the projects directly on [GitHub](https://github.com/CalmAfterReboot/BLS-DevOps). Each project README has complete technical documentation, setup instructions, and troubleshooting notes.
 
-For inquiries about platform engineering, DevOps practices, or infrastructure-as-code: reach out through your normal recruitment channels.
-
-Blue Layer Systems — Production-grade infrastructure, built to last.
+Blue Layer Systems — production-grade infrastructure, documented as it was built.

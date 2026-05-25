@@ -1,6 +1,6 @@
 # What Broke — BLS Portfolio Incident Log
 
-This document records bugs, misconfigurations, and failures encountered during the BLS DevOps portfolio, along with their root causes, fixes, and lessons. It is written so that someone reading it — a hiring manager, a colleague, or a future version of me — can understand not just what went wrong but why, and what kind of thinking it took to resolve it.
+This document records bugs, misconfigurations, and failures encountered during the BLS DevOps portfolio, along with their root causes, fixes, and lessons. It is written so that someone reading it — a colleague, a future maintainer, or a future version of me — can understand not just what went wrong but why, and what kind of thinking it took to resolve it.
 
 ---
 

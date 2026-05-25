@@ -2,20 +2,15 @@
 
 > Replaces the build schedule in `BLS-master-plan-v3.md`. Treat this file as the single source of truth for what gets built in the next six weeks and what does not.
 
-The substantive engineering is done. P1–P5 are built. The work that remains is narrative: making the portfolio legible to the audience that hires for permanent UK platform engineer roles at the £75–85k base salary band. Plan-v4 is the six-week harness that closes that gap.
+The substantive engineering is done. P1–P5 are built. The work that remains is narrative: making the portfolio legible end-to-end — from architectural intent down to verifiable evidence. Plan-v4 is the six-week harness that closes that gap.
 
 ## 1. North Star
 
-**Interview-ready portfolio in 6 weeks at the £75–85k base band (permanent, UK remote-first).**
+**Interview-ready portfolio in 6 weeks.**
 
-"Interview-ready" has a hard definition: a hiring manager landing on the repo's root README, the bridge document, and the diagram catalogue gets the £80k signal in 90 seconds — concept depth visible, scope honest, tools justified, evidence linked. If they want more, every claim drills down to an ADR, a runbook, a diagram, or a live Application in the cluster.
+"Interview-ready" has a hard definition: a reader landing on the repo's root README, the bridge document, and the diagram catalogue gets the signal in 90 seconds — concept depth visible, scope honest, tools justified, evidence linked. If they want more, every claim drills down to an ADR, a runbook, a diagram, or a live Application in the cluster.
 
-The plan is not a rebuild. The engineering work that earned the salary band has already happened: a hub-spoke Azure landing zone (P1), an HA k3s cluster on Proxmox with an Ansible hardening role (P2), a matrix ApplicationSet driving multi-cluster GitOps (P3), a FastAPI/LiteLLM gateway live on the cluster for days (P4), and a kube-prometheus-stack + Sealed-Secrets observability + secrets layer (P5). Six ADRs, two runbooks, five release tags, ~70 commits, real incidents documented. The work is there. The plan moves it into the form an interviewer can verify in ninety seconds.
-
-Two anchors that are not negotiable:
-
-- **The architect's day-job title is Technical Operations Engineer at a UK MSP. The capability the portfolio demonstrates — and the target role this plan is calibrated for — is senior platform engineer.** Both are true simultaneously: the day job has not yet caught up to the capability. The portfolio is the evidence that bridges that gap. Positioning language honours both facts — no "transitioning," "aspiring," "junior," or "learning"; equally, no overclaim that the current title is already Platform Engineer.
-- **Salary anchor is £75–85k base salary, permanent roles only, UK remote-first.** Every artefact in this plan is calibrated for that band and that employment type. The earlier £45–65k anchor in Plan-v3 was wrong for the work shipped and is retired (see §6). Contract, day-rate, and outside-IR35 work are explicitly out of scope for this attempt — base salary security is the deliberate prioritisation while the portfolio bridges the current-title-versus-capability gap.
+The plan is not a rebuild. The engineering work has already happened: a hub-spoke Azure landing zone (P1), an HA k3s cluster on Proxmox with an Ansible hardening role (P2), a matrix ApplicationSet driving multi-cluster GitOps (P3), a FastAPI/LiteLLM gateway live on the cluster for days (P4), and a kube-prometheus-stack + Sealed-Secrets observability + secrets layer (P5). Six ADRs, two runbooks, five release tags, ~70 commits, real incidents documented. The work is there. The plan moves it into the form a reader can verify in ninety seconds.
 
 ## 2. The 6-week shape
 
@@ -23,14 +18,14 @@ Two anchors that are not negotiable:
 |---|---|---|---|
 | **1** | Bootstrap + bridge document skeleton + scope-boundary diagram | Narrative + diagrams | Plan-v4 operating doc, concept→tool mapping, bridge document spine, first two diagrams, ADR-007. **First merge.** |
 | **2** | Bridge document expanded + 3 core diagrams + WU-3 closure | Narrative + diagrams + hardening | P4 chart deduplicated (canonical chart wins), topology diagrams committed (Azure landing zone, k3s cluster, multi-cluster GitOps), WU-9 P4 README rebuilt. |
-| **3** | Remaining diagrams + WU-4 + WU-6 + CV/LinkedIn rewrite | Hardening + positioning | Bootstrap secrets converted to SealedSecret refs (WU-4), P5 README written (WU-6), CV/LinkedIn rebuilt to the £75–85k positioning. Portfolio narrative complete. |
+| **3** | Remaining diagrams + WU-4 + WU-6 + CV/LinkedIn rewrite | Hardening + positioning | Bootstrap secrets converted to SealedSecret refs (WU-4), P5 README written (WU-6), CV/LinkedIn rebuilt against the shipped portfolio. Portfolio narrative complete. |
 | **4** | WU-5 decision + scope-honesty pass + capstone blog post + **first applications** | Application sprint begins | WU-5 resolved (clean dangling AKS refs or rebuild AKS), scope-discipline pass on every README, capstone post published. First 5 applications out. |
 | **5** | Interview kata + portfolio final pass + scaled applications | Application sprint | Interview prep round (system design, deep-dives, behavioural), portfolio final read-through, 15+ applications out, phone screens starting. |
 | **6** | Final rounds + negotiation prep + retrospective | Application sprint close | Offer pipeline or honest reassessment. Either way: a written retrospective on what the six weeks produced. |
 
 **Build window:** nominally Thu 14 May → Wed 24 Jun 2026. Flex permitted. The plan is calibrated to the calendar, not to a rigid sprint cadence — daily budget is 2–3 hours, not a full work-week.
 
-**Definition of "shippable to recruiters":** the repo is presentable from Week 4 Day 1. Weeks 5–6 are application throughput plus interview load, not building. If Week 4 starts and the portfolio is not shippable, the diagnosis is "Week 3 missed scope," not "more building needed."
+**Definition of "shippable":** the repo is presentable from Week 4 Day 1. Weeks 5–6 are application throughput plus interview load, not building. If Week 4 starts and the portfolio is not shippable, the diagnosis is "Week 3 missed scope," not "more building needed."
 
 ## 3. Operating rules
 
@@ -61,7 +56,7 @@ These rules apply to every week's PR and every Claude Code orchestration prompt.
 ### Concept-first, tool-second
 
 - **Every artefact in this plan introduces a concept before naming the tool that implements it.** "Encrypted secrets in Git, decrypted only by a cluster-side controller — implemented with Bitnami Sealed Secrets" is correct. "Sealed Secrets, a tool for…" is wrong.
-- This rule exists because the audience for the portfolio (hiring managers, technical leads, recruiters with technical scoping) picks the candidate who can name the concept. The tool is the implementation detail. ADR-005 demonstrates the pattern: the matrix-generator concept is named, the alternatives are evaluated against the concept, and the chosen tool inherits its justification from that evaluation.
+- This rule exists because the reader who matters picks the candidate who can name the concept. The tool is the implementation detail. ADR-005 demonstrates the pattern: the matrix-generator concept is named, the alternatives are evaluated against the concept, and the chosen tool inherits its justification from that evaluation.
 - The single global reference for this mapping is [concept-tool-mapping.md](./concept-tool-mapping.md). Every ADR, every README, and every section of the bridge document links to it.
 
 ### ADRs
@@ -81,14 +76,14 @@ The plan is bounded. The boundaries are stated explicitly so the next "wouldn't 
 
 - **No new infrastructure builds.** P1–P5 are built. P6 is empty by design and stays empty until at least one of its workstreams ships outside Plan-v4 — it is not part of the six-week scope. If a Plan-v4 week reads as "build a new project," the week's prompt was written wrong.
 - **No AKS rebuild unless WU-5 decision goes that way.** WU-5 (clean dangling AKS refs vs rebuild AKS) is a decision, not a default. Rebuilding AKS costs money (the £60 hard cap), costs time, and changes the P3 narrative from "tore down to preserve spend discipline" to "kept running" — both stories are defensible. The decision lands in Week 4. Until then, no AKS infrastructure work.
-- **No certifications chase.** AZ-104 is in progress in the background; that is fine and continues at its own pace. But certifications are not a Plan-v4 deliverable. The £75–85k band rewards demonstrated platform capability, not pieces of paper. If application replies stall in Weeks 5–6, the diagnostic is "positioning or pipeline," not "more certs."
+- **No certifications chase.** AZ-104 is in progress in the background; that is fine and continues at its own pace. But certifications are not a Plan-v4 deliverable. Demonstrated platform capability is what the portfolio is built to surface. If application replies stall in Weeks 5–6, the diagnostic is "positioning or pipeline," not "more certs."
 - **No tech-stack expansion.** The portfolio is Azure + Proxmox + k3s + ArgoCD + Terraform + Ansible + Python (FastAPI) + Helm + Prometheus + Sealed Secrets. That stack is enough for the role band targeted. Adding GCP, AWS, or a second observability tool inside the six-week window dilutes signal and consumes the daily 2–3-hour budget that should go to bridge content and applications.
 - **No multi-repo split.** The monorepo stays. Splitting `terraform-bls-azure`, `homelab-k3s`, `gitops-bls`, `llm-gateway` into separate repos was considered and rejected (ADR-007, alternatives section). The split would consume 1–2 weeks of Plan-v4's budget for purely cosmetic gain and would lose the cross-project links that make the portfolio coherent.
-- **No "rewrite Plan-v3 from scratch" energy.** The salvageable parts of Plan-v3 — templates, prompts library, the engineering-standards section — carry forward. The build schedule, the weeks 1–18 narrative, and the £45–65k anchor are retired (§6). No litigation of why Plan-v3 was wrong beyond the ADR-007 entry.
+- **No "rewrite Plan-v3 from scratch" energy.** The salvageable parts of Plan-v3 — templates, prompts library, the engineering-standards section — carry forward. The build schedule and the weeks 1–18 narrative are retired (§6). No litigation of why Plan-v3 was wrong beyond the ADR-007 entry.
 
 ## 6. Plan-v3 deprecation note
 
-Plan-v3 (`BLS-master-plan-v3.md`, in local `files/` workspace — gitignored) drove the substantive build work that produced P1–P5. It did its job. The reasons it does not drive Plan-v4 are scoped and recorded here so the next time someone (the architect, a future collaborator, a recruiter doing diligence) asks "what changed," the answer is in one place.
+Plan-v3 (`BLS-master-plan-v3.md`, in local `files/` workspace — gitignored) drove the substantive build work that produced P1–P5. It did its job. The reasons it does not drive Plan-v4 are scoped and recorded here so the next time someone (the architect, a future collaborator) asks "what changed," the answer is in one place.
 
 ### What carries forward from Plan-v3
 
@@ -101,7 +96,6 @@ Plan-v3 (`BLS-master-plan-v3.md`, in local `files/` workspace — gitignored) dr
 
 - **The build schedule.** Plan-v3 framed an 18-week build out of scope from Week 0 (zero-state). The portfolio is no longer at zero state. The 18-week build schedule does not map onto the work that remains.
 - **Weeks 1–18 narrative.** Anything that reads "in Week 9 we will…" or refers to a build phase by number does not survive Plan-v4. The narrative is now six weeks of polish-and-position on a built portfolio, not eighteen weeks of construction.
-- **£45–65k salary anchor.** The anchor in Plan-v3 reflected a different assumption about the candidate's positioning. The work that landed (a hub-spoke landing zone with state in a remote backend, a hardened HA k3s cluster on bare hardware with documented incident recovery, a matrix-generator ApplicationSet, an in-cluster LLM gateway with metrics exposed to Prometheus, a Sealed-Secrets controller with a runbook and a tested restart path) is calibrated to the £75–85k band. Plan-v4 is built to that anchor. Any artefact that mentions £45–65k is wrong and should be corrected on sight.
 - **References to Plan-v3 by name in committed content.** The bridge document and the project READMEs do not cite Plan-v3 as the source of any decision. The ADRs are the source of decisions. Plan-v3 was the harness that produced them; the ADRs themselves stand on their own.
 
 ### Disposal of the Plan-v3 source
