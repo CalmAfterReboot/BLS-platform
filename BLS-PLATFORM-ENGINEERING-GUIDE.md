@@ -1,6 +1,6 @@
 # Blue Layer Systems — Platform Engineering Guide
 
-> Bridge document. Translates the engineering work in this monorepo into language a hiring manager, a technical lead, or a recruiter scoping a UK platform engineer role can verify in under ten minutes.
+> Bridge document. Translates the engineering work in this monorepo into a reading path that goes from architectural intent to verifiable evidence in under ten minutes.
 >
 > Concept-first, tool-second throughout. Every tool named here is justified by the concept it implements; the depth of that justification lives in the ADRs and runbooks linked from each section.
 
@@ -8,7 +8,7 @@
 
 ## 1. The signal
 
-If you are reading this with a job description in the other tab, the question you need answered is whether the candidate behind this repository can show up on a Monday and operate a production platform without supervision. The artefacts in this monorepo answer that question directly. Not through a CV's worth of verbs ("designed, implemented, architected"), but through code that runs, decisions that are recorded, and incidents that were documented as they happened.
+The question this document answers: whether the work in this repository can stand up a production platform without supervision. The artefacts answer it directly — not through a CV's worth of verbs ("designed, implemented, architected"), but through code that runs, decisions that are recorded, and incidents that were documented as they happened.
 
 The portfolio is six projects deep. Five are built and live; one is intentionally empty until the work behind it ships. The infrastructure spans a hub-spoke Azure landing zone backed by remote Terraform state with locking, a three-node highly-available Kubernetes cluster on bare-metal Proxmox with an Ansible-driven hardening baseline, a matrix-generator ApplicationSet driving GitOps reconciliation to multiple clusters from a single manifest, a FastAPI/LiteLLM gateway running live behind that GitOps layer with Prometheus metrics exposed, and a Sealed-Secrets controller plus kube-prometheus-stack observability with a tested restart path and a written backup runbook.
 
@@ -18,15 +18,13 @@ Five release tags mark milestones — `v0.2.0-k3s-cluster-live` through `v0.5.0-
 
 This document exists because the work is dense enough to be unreadable without a map. The map is concept-first: the property being implemented comes before the tool that implements it, so a reader following an unfamiliar tool can stay oriented on the architectural intent. The single global concept→tool reference table is at [`docs/plan-v4/concept-tool-mapping.md`](docs/plan-v4/concept-tool-mapping.md).
 
-## 2. The architect
+## 2. The working context
 
-The architect's day-job title is Technical Operations Engineer at a UK Managed Services Provider. The capability the work demonstrates — and the target role this portfolio is calibrated for — is senior platform engineer. Both are true simultaneously: the day job has not yet caught up to the capability. The portfolio is the evidence that bridges that gap. The work in this repository was built on personal time, on personal hardware, against personal cloud spend within a hard £60 cap on the Azure side. The output is calibrated to permanent platform engineer roles at the £75–85k base salary band, UK remote-first — not as an aspiration, but as the role the work demonstrates capability for.
+The work in this repository was built on personal time, on personal hardware, against personal cloud spend within a hard £60 cap on the Azure side. Everything in `git log` is the architect's own engineering decision, against a constraint set the architect set, using a tool stack the architect picked from alternatives.
 
-The MSP context matters: a Technical Operations Engineer at an MSP works across multiple clients' infrastructure, in environments not of their own choosing, against constraints that vary by week. That working surface produces a different engineering reflex than a single-product platform team. The reflex visible in this repository — defensive backups for the master key before any operation that could destroy the controller's namespace, preflight scripts that snapshot state before destructive actions, "surface, never automate" as the rule for destructive operations — is that reflex calibrated for a portfolio rather than a single client.
+The day-job working surface is a UK Managed Services Provider. An MSP operator works across multiple clients' infrastructure, in environments not of their own choosing, against constraints that vary by week. That surface produces a different engineering reflex than a single-product platform team. The reflex visible in this repository — defensive backups for the master key before any operation that could destroy the controller's namespace, preflight scripts that snapshot state before destructive actions, "surface, never automate" as the rule for destructive operations — is that reflex applied to a portfolio rather than a single client.
 
-What this repository is not: a sequence of tutorial completions, a Cloud Resume Challenge variant, a Terraform learn-by-doing repository, a kubernetes-the-hard-way replay. The tutorials those names describe were not unhelpful inputs to the path that produced this work, but the work itself stands on its own — every project solves a problem the architect chose, against a constraint set the architect set, using a tool stack the architect picked from alternatives.
-
-Target role surface: senior platform engineer, staff platform engineer, infrastructure engineer with platform responsibility, SRE with infrastructure scope. **Permanent roles only** — base salary security is a deliberate prioritisation while the portfolio bridges the current-title-versus-capability gap. UK-based, remote-first; will work UK or UK-adjacent EU hours. Contract, day-rate, and outside-IR35 work are explicitly out of scope for this attempt.
+What this repository is not: a sequence of tutorial completions, a Cloud Resume Challenge variant, a Terraform learn-by-doing repository, a kubernetes-the-hard-way replay. The tutorials those names describe were not unhelpful inputs to the path that produced this work, but the work itself stands on its own — every project solves a problem the architect chose, against constraints the architect set.
 
 ## 3. The portfolio at a glance
 
@@ -80,7 +78,7 @@ Five built projects and one intentionally empty placeholder. Each project's READ
 
 **Implementation:** kube-prometheus-stack deployed as a standalone ArgoCD Application using ArgoCD multi-source — upstream chart pinned to a version, custom values held in Git as a separately reviewable file (ADR-006). Prometheus configured with `serviceMonitorSelector: {}` so it watches ServiceMonitors across all namespaces; k3s control-plane components disabled in values to avoid ScrapeError noise. Bitnami Sealed-Secrets controller pinned into its own namespace (`sealed-secrets`, not `kube-system`) with a wider-selector backup procedure capturing all retained keys (active and rotated-out) and a controller-restart test proving in-cluster key reload works without losing decryption capability.
 
-The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/runbooks/sealed-secrets-controller.md)) is itself a portfolio artefact — it is the kind of operational document a hiring manager wants to see, because it documents not only the happy path but the known gap (full restore-from-backup against a fresh cluster has not been routinely executed; the runbook says so explicitly).
+The Sealed-Secrets runbook ([`docs/runbooks/sealed-secrets-controller.md`](docs/runbooks/sealed-secrets-controller.md)) is itself a load-bearing artefact — it documents not only the happy path but the known gap (full restore-from-backup against a fresh cluster has not been routinely executed; the runbook says so explicitly).
 
 **What this demonstrates:** the candidate treats secrets and observability as load-bearing infrastructure with operational discipline, not as features to be ticked off. The runbook is honest about what is tested and what is not. Defensive backups precede destructive operations.
 
@@ -180,17 +178,17 @@ The decisions are recorded. The commits are conventional. The hooks gate the com
 
 A portfolio is as much about what is not in it as what is. The following are choices, not gaps:
 
-**No multi-tenant production workload.** The cluster runs the architect's own workloads. There is no claim of multi-tenant operations, RBAC partitioning across customers, or quota-and-noisy-neighbour mitigation at scale. A reader looking for "multi-tenant SaaS platform operator" should look elsewhere or treat that as the next surface to expand into.
+**No multi-tenant production workload.** The cluster runs the architect's own workloads. There is no claim of multi-tenant operations, RBAC partitioning across customers, or quota-and-noisy-neighbour mitigation at scale. Multi-tenant operations are not in scope; that surface would be the next expansion.
 
-**No claim of AWS or GCP production experience inside this repository.** The Terraform stack here is Azure-first; GCP parity is named on the P6 roadmap and has not shipped. AWS exposure exists outside this repository in the architect's MSP work but is not demonstrated here. If a role requires AWS production depth as a hard requirement, this repository is not the artefact that proves it.
+**No claim of AWS or GCP production experience inside this repository.** The Terraform stack here is Azure-first; GCP parity is named on the P6 roadmap and has not shipped. AWS exposure exists outside this repository in the architect's MSP work but is not demonstrated here. AWS production depth is not a property this repository proves.
 
-**No claim of platform-team-of-N operations.** This is a one-architect portfolio. The "platform engineering team" experience this repository demonstrates is the architect operating across multiple environments and projects against a constraint set they set — not coordinating across a team of platform engineers. Roles that ask for "experience leading a platform team" should weight other signals.
+**No claim of platform-team-of-N operations.** This is a one-architect portfolio. What this repository demonstrates is the architect operating across multiple environments and projects against a constraint set they set — not coordinating across a team of platform engineers. Cross-team coordination is not a signal this portfolio surfaces.
 
 **No claim that AKS is currently running.** AKS was provisioned for the P3 multi-cluster demonstration and torn down to preserve the £60 Azure spend cap. The dangling registrations in ArgoCD are tracked transparently (PHASE-2-HANDOFF.md WU-5 — local-only). A rebuild decision is on the Plan-v4 calendar for Week 4; until then, the portfolio's AKS claim is "built once, evidence captured, torn down for cost discipline."
 
 **No claim that every WU is closed.** The Phase 2 hardening sprint has open work units (P5 README, audit logging on the cluster API server, AKS rebuild). Chart deduplication (WU-3) closed in Week 2; SealedSecret conversion for the LLM gateway plus removal of the homelab Ollama address from values.yaml (WU-4) closed on 2026-05-24. The remaining work is in flight; the handoff doc is honest about it. A closing portfolio that pretends every loose end is tied is a portfolio that cannot be trusted on the tied ones.
 
-**No claim of formal SRE on-call.** The architect's recovery work in this repository is real but not 24/7-on-call work. SRE roles requiring proven on-call rotation depth should look at the architect's MSP experience (not in this repository) rather than at this portfolio alone.
+**No claim of formal SRE on-call.** The recovery work in this repository is real but not 24/7-on-call work. Proven on-call rotation depth is MSP context outside this repository, not a property of the platform here.
 
 ## 7. How to verify
 
@@ -208,7 +206,7 @@ This portfolio is verifiable end-to-end. Every claim above drills down through t
 
 **Live cluster.** The k3s cluster, ArgoCD reconciler, and the LLM gateway have been running through the construction of this document. Specific verification commands (Prometheus target list, ArgoCD Application sync status, gateway `/metrics` reachability) are reproduced in the per-project READMEs and in the relevant ADR's Verification section.
 
-**Contact.** Through normal recruitment channels. The architect responds quickly to scoping questions, prefers a thirty-minute technical conversation before any take-home, and will share the gitignored handoff documents on request once a role is in scope.
+**Contact.** Through normal channels. Quick to respond to technical scoping questions; prefers a thirty-minute technical conversation before deeper engagement. Gitignored handoff documents are shared on request.
 
 ---
 

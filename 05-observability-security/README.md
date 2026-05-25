@@ -685,9 +685,8 @@ P5 came together in three stages:
    - PR #23 — observability data-flow diagram (06) + this README
      (recovered from the #19/#20 stack after a squash-merge SHA
      mismatch caused GitHub to auto-close them)
-   - PR #21 — bridge document relabel: "load-bearing decision" replaces
-     the previous "decision that made this senior" bullet label across
-     §4.1–§4.5
+   - PR #21 — bridge document bullet-label cleanup across §4.1–§4.5
+     (uniform "Load-bearing decision:" label)
    - PR #22 — bridge document §4.5 architect-voice fills (multi-source
      decision; Loki deferred); diagram-06 + ADR-009 reading-path
      links activated
