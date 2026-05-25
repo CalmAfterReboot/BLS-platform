@@ -1,0 +1,108 @@
+{{- if .Values.prometheusRules.enabled }}
+# Workload-specific PrometheusRule for the LLM gateway.
+#
+# Three rules cover the load-bearing failure modes:
+#
+#   - LLMGatewayDown — target absent from Prometheus's scrape view
+#     (pod crashed, NetworkPolicy misconfigured, ServiceMonitor
+#     selector drifted)
+#   - LLMGatewayHighErrorRate — 5xx ratio above 5% over a sustained
+#     10-minute window
+#   - LLMGatewayHighLatency — p99 latency on non-LLM endpoints above
+#     1 second over 10 minutes. The /v1/chat/completions handler is
+#     excluded from this rule because LLM inference is legitimately
+#     slow (multi-second generations are normal); slowness on the
+#     fast paths (/healthz, /metrics) is the real signal.
+#
+# Scope statement: ADR-010 records the deliberate choice to keep
+# Alertmanager DISABLED on this homelab deployment. These rules fire
+# to the Prometheus UI only (visible at /alerts when port-forwarded);
+# they do not page externally. Re-enable is one values change away
+# in the kube-prometheus-stack chart if a real audience appears.
+#
+# Metric source: prometheus-fastapi-instrumentator 7.1.0 (default
+# `Instrumentator().instrument(app).expose(app)` in app/main.py).
+# - http_requests_total{handler, method, status}   counter, status="5xx" etc.
+# - http_request_duration_seconds_bucket{handler}  histogram, few buckets
+#
+# Toggle with .Values.prometheusRules.enabled (default true). Disable
+# if deploying the chart to a cluster where the prometheus-operator
+# is not installed — the chart will fail to render the PrometheusRule
+# CRD otherwise.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: llm-gateway
+  namespace: {{ .Values.namespace }}
+  # The kube-prometheus-stack release picks up PrometheusRules in any
+  # namespace because ruleSelector is set to {} in the values overlay
+  # at 05-observability-security/values/kube-prometheus-stack.yaml.
+  # The release label is kept for parity with the ServiceMonitor and
+  # for portability to clusters where ruleSelector is non-empty.
+  labels:
+    app: llm-gateway
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: llm-gateway.rules
+      interval: 30s
+      rules:
+        - alert: LLMGatewayDown
+          expr: up{namespace="llm-gateway", service="llm-gateway-service"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            workload: llm-gateway
+          annotations:
+            summary: "LLM gateway scrape target is DOWN ({{`{{ $labels.pod }}`}})"
+            description: |
+              Prometheus has been unable to scrape /metrics on the
+              llm-gateway service for 5 minutes. Investigate: the pod
+              may be crashed, the NetworkPolicy may be misconfigured
+              (gateway-policy ingress rule blocking Prometheus), or
+              the ServiceMonitor selector may have drifted.
+
+        - alert: LLMGatewayHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="llm-gateway", service="llm-gateway-service", status="5xx"}[5m]))
+              /
+              sum(rate(http_requests_total{namespace="llm-gateway", service="llm-gateway-service"}[5m]))
+            ) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            workload: llm-gateway
+          annotations:
+            summary: "LLM gateway 5xx error rate above 5% for 10m"
+            description: |
+              5xx responses make up more than 5% of all gateway responses
+              over a sustained 10-minute window. Check the upstream LLM
+              providers (Ollama on the Proxmox host, OpenAI, Azure OpenAI,
+              DeepSeek) and the LiteLLM router pod logs. The auth
+              middleware returns typed 401/403 (counted as 4xx), so this
+              rule does not fire on bad credentials.
+
+        - alert: LLMGatewayHighLatency
+          expr: |
+            histogram_quantile(
+              0.99,
+              sum by (le) (
+                rate(http_request_duration_seconds_bucket{namespace="llm-gateway", service="llm-gateway-service", handler!="/v1/chat/completions"}[5m])
+              )
+            ) > 1
+          for: 10m
+          labels:
+            severity: warning
+            workload: llm-gateway
+          annotations:
+            summary: "LLM gateway fast-path p99 latency > 1s for 10m"
+            description: |
+              p99 latency on non-LLM endpoints (/healthz, /metrics, etc.)
+              exceeded 1s for 10 minutes. The /v1/chat/completions handler
+              is deliberately excluded — LLM inference is legitimately
+              slow (multi-second generations are normal). Slowness on the
+              fast paths suggests event-loop contention, GC pressure, or
+              container resource starvation. Check `kubectl top pod -n
+              llm-gateway` and the gateway pod logs.
+{{- end }}

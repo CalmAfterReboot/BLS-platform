@@ -51,6 +51,13 @@ grafana:
       cpu: 500m
       memory: 512Mi
 
+# Alertmanager is intentionally disabled per ADR-010 — workload
+# PrometheusRules (shipped with the llm-gateway chart) fire to the
+# Prometheus UI's /alerts endpoint only; no external paging. The
+# homelab has no on-call rotation, so routing alerts anywhere would
+# be operational theatre. Re-enable is one-line change here plus a
+# receivers/route block under .config — see ADR-010 for the trigger
+# conditions that should drive that change.
 alertmanager:
   enabled: false
 
