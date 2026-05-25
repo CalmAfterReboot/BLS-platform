@@ -20,6 +20,11 @@
 > verification artefacts under `docs/verification/` (captured
 > 2026-05-23). The historical README and SECURITY.md below are
 > preserved verbatim from the source repo.
+>
+> The trade-off between rolling-my-own and adopting LiteLLM
+> is documented in [ADR-011](../../docs/adr/ADR-011-llm-gateway-implementation-choice.md)
+> (canonical) and mirrored locally at
+> [`docs/adr/ADR-001-litellm-vs-roll-your-own.md`](docs/adr/ADR-001-litellm-vs-roll-your-own.md).
 
 ---
 
