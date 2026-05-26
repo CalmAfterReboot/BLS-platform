@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: cloudflared
+data:
+  config.yml: |
+    # Generated from k8s/workloads/cloudflared/templates/configmap.yaml.
+    # Tunnel UUID is the one created by
+    # projects/06-platform-hardening/terraform/cloudflare/ — see
+    # `terraform output tunnel_id` after apply.
+    tunnel: {{ required "tunnel.id must be set after terraform apply (see chart values.yaml)" .Values.tunnel.id }}
+    credentials-file: /etc/cloudflared/credentials/credentials.json
+
+    # Daemon-level settings. Logs to stdout (collected by container
+    # runtime); no log files written to the read-only root filesystem.
+    no-autoupdate: true
+    metrics: 0.0.0.0:2000
+    loglevel: info
+    transport-loglevel: warn
+
+    # Ingress rules — must match the tunnel config declared in
+    # cloudflare_zero_trust_tunnel_cloudflared_config (Terraform).
+    # The 404 catch-all is required by cloudflared.
+    ingress:
+{{- range .Values.ingress }}
+      - hostname: {{ .hostname }}
+        service: {{ .service }}
+{{- end }}
+      - service: http_status:404

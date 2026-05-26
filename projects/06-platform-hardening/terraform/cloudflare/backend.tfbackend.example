@@ -1,0 +1,5 @@
+# Copy to `backend.tfbackend` (gitignored) and fill in.
+# Initialise with: terraform init -backend-config=backend.tfbackend
+resource_group_name  = "<tfstate-resource-group>"
+storage_account_name = "<tfstate-storage-account>"
+container_name       = "tfstate"

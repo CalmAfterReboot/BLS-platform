@@ -50,6 +50,17 @@ grafana:
     limits:
       cpu: 500m
       memory: 512Mi
+  # Auth/authz hardening per ADR-012. Grafana sits behind Cloudflare
+  # Access (recruiter PIN policy on grafana.bluelayersystems.com), but
+  # the form-login UI is intentionally LEFT ENABLED so the operator
+  # can still log in directly via kubectl port-forward when Cloudflare
+  # is unavailable. Defense in depth = "either authentication layer
+  # alone is enough"; CF Access in front, Grafana auth at the backend.
+  env:
+    GF_AUTH_ANONYMOUS_ENABLED: "false"        # explicit; default is also false
+    GF_USERS_ALLOW_SIGN_UP: "false"           # no self-service signup
+    GF_USERS_AUTO_ASSIGN_ORG_ROLE: "Viewer"   # any account created via SSO lands as Viewer
+    GF_AUTH_DISABLE_LOGIN_FORM: "false"       # keep form auth as fallback path
 
 # Alertmanager is intentionally disabled per ADR-010 — workload
 # PrometheusRules (shipped with the llm-gateway chart) fire to the

@@ -1,0 +1,79 @@
+{{- if .Values.networkPolicies.enabled }}
+# Ingress: deny all. cloudflared only initiates outbound to Cloudflare's
+# edge; nothing else in-cluster should reach it directly. The /metrics
+# endpoint is intentionally not scraped from outside this namespace —
+# add a tightly-scoped ingress rule + ServiceMonitor in a follow-up PR
+# if/when we want kube-prometheus-stack to scrape it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cloudflared-default-deny-ingress
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  policyTypes:
+    - Ingress
+  ingress: []
+---
+# Egress: allow outbound to the wider internet on the ports cloudflared
+# actually uses (HTTPS, QUIC) plus in-cluster DNS resolution. We do NOT
+# pin to Cloudflare's published CIDRs because (a) the list changes
+# periodically and (b) cloudflared also speaks to the cluster's CoreDNS
+# at startup. Documented trade-off — see ADR-012.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cloudflared-egress
+  namespace: {{ .Values.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  policyTypes:
+    - Egress
+  egress:
+    # DNS (in-cluster CoreDNS).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Cloudflare edge — HTTPS + QUIC. Open to all CIDRs because
+    # the Cloudflare anycast range changes; see ADR-012 trade-off.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16  # link-local; blocks SSRF to cloud metadata
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: UDP
+          port: 7844
+    # In-cluster upstreams the tunnel ingress rules forward to.
+    # Scoped per namespace; ports left open (services pick the port).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: argocd
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: llm-gateway
+{{- end }}

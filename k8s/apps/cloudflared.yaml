@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflared
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bls-platform
+    app.kubernetes.io/component: tunnel
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CalmAfterReboot/BLS-platform.git
+    targetRevision: main
+    path: k8s/workloads/cloudflared
+    helm:
+      releaseName: cloudflared
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudflared
+  # Per ADR-012: tunnel state is operationally sensitive — automated
+  # sync is enabled so manifest changes propagate, but prune + selfHeal
+  # are deliberately OFF. Operator-driven changes (post-rotation
+  # SealedSecret swap, tunnel ID change, etc.) commit-then-sync without
+  # automation deleting resources or re-creating them mid-rotation.
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
