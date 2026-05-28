@@ -16,6 +16,11 @@ prometheus:
     replicas: 1
     retention: 7d
     retentionSize: "5GB"
+    # Accept remote-write from the otel-collector (see ADR-013) so OTLP
+    # metrics from the LLM gateway land in the same Prometheus that
+    # scrapes everything else. Endpoint: /api/v1/write. No auth — the
+    # NetworkPolicy posture (ADR-009) is what scopes the receiver.
+    enableRemoteWriteReceiver: true
     # Watch ServiceMonitors across all namespaces — required for llm-gateway scraping.
     # serviceMonitorSelectorNilUsesHelmValues must be false or Prometheus ignores the
     # empty selector and defaults to matchLabels: release: kube-prometheus-stack.

@@ -1,8 +1,15 @@
+import logging
+
+# OTel bootstrap MUST run before FastAPI() is called so the
+# class-level instrumentation patches the constructor.
+from otel import otel_init
+
+otel_init()
+
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 from routers import completions
 from middleware.auth import APIKeyMiddleware
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bls-gateway")

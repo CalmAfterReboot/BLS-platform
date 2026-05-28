@@ -3,3 +3,21 @@ uvicorn[standard]==0.30.0
 httpx==0.27.0
 pydantic==2.7.0
 prometheus-fastapi-instrumentator==7.1.0
+# redis-py is required at module-load by the OTel Redis instrumentor
+# below. The gateway app does not instantiate a Redis client itself
+# (LiteLLM holds the only Redis connection, in a separate pod), so
+# the instrumentation sits dormant and emits no spans. Dep is kept
+# to allow RedisInstrumentor().instrument() to import cleanly and
+# to leave a future direct-Redis-client option open.
+redis==5.0.8
+
+# OpenTelemetry — added in p6.2 (ADR-013).
+# API/SDK/exporter are on the 1.x stable train; instrumentations are
+# on the matching 0.50b0 pre-release train (this is the upstream
+# release convention, not "beta quality"). Bump as a pair.
+opentelemetry-api==1.29.0
+opentelemetry-sdk==1.29.0
+opentelemetry-exporter-otlp-proto-grpc==1.29.0
+opentelemetry-instrumentation-fastapi==0.50b0
+opentelemetry-instrumentation-httpx==0.50b0
+opentelemetry-instrumentation-redis==0.50b0

@@ -1,0 +1,52 @@
+# Tempo datasource for Grafana — picked up by the kube-prometheus-stack
+# Grafana sidecar. Wires the trace → log pivot via Loki's datasource UID
+# and the trace → service-graph pivot via Prometheus's UID (the latter
+# is the default UID kube-prometheus-stack ships).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-datasource
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  tempo-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo.observability.svc.cluster.local:3100
+        editable: false
+        jsonData:
+          # Trace → log pivot: when viewing a trace span, the
+          # Explore view offers a "View logs" button that runs a
+          # Loki query scoped to the span's time window.
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: -5m
+            spanEndTimeShift: 5m
+            filterByTraceID: true
+            filterBySpanID: false
+            tags:
+              - { key: 'service.name', value: 'service_name' }
+              - { key: 'k8s.namespace.name', value: 'namespace' }
+          # Trace → metrics pivot: clicking a span shows latency /
+          # request-rate panels for the matching service.
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: -5m
+            spanEndTimeShift: 5m
+            tags:
+              - { key: 'service.name', value: 'service_name' }
+          # Service-graph rendered from span metrics produced by
+          # the tail-sampling collector pipeline.
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
+          search:
+            hide: false
+          lokiSearch:
+            datasourceUid: loki

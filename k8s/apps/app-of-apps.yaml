@@ -12,6 +12,18 @@ spec:
           revision: HEAD
           directories:
           - path: k8s/workloads/*
+          # Exclude: otel-collector is deployed via a standalone
+          # ArgoCD Application at k8s/apps/otel-collector.yaml that
+          # handles its Helm dependency build. The matrix would
+          # generate a duplicate Application that fights with it.
+          - path: k8s/workloads/otel-collector
+            exclude: true
+          # Exclude: argocd-config holds strategic-merge patches
+          # for argocd-cm/argocd-rbac-cm that the operator applies
+          # manually (kubectl patch) — see ADR-012 / runbook. They
+          # are not standalone Kubernetes resources.
+          - path: k8s/workloads/argocd-config
+            exclude: true
       - clusters: {}
   template:
     metadata:

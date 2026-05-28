@@ -1,0 +1,167 @@
+# Wrapper values for the open-telemetry/opentelemetry-collector
+# dependency. All knobs nested under the dependency's chart name.
+# See ADR-013 for design + tail-sampling rationale.
+opentelemetry-collector:
+  # Contrib distribution is required for the tail_sampling processor
+  # and the loki / prometheusremotewrite exporters. Core does not
+  # include them.
+  image:
+    repository: otel/opentelemetry-collector-contrib
+
+  # DaemonSet so every node hosts a local collector — gateway pods send
+  # OTLP to localhost:4317 (set via OTEL_EXPORTER_OTLP_ENDPOINT in the
+  # llm-gateway chart values), reducing east-west cluster traffic.
+  mode: daemonset
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  # Health + readiness probes target the collector's own /health endpoint
+  # rendered by the dependency chart; nothing to override here.
+
+  ports:
+    otlp:
+      enabled: true
+      containerPort: 4317
+      servicePort: 4317
+      protocol: TCP
+    otlp-http:
+      enabled: true
+      containerPort: 4318
+      servicePort: 4318
+      protocol: TCP
+    # Disable other exposed ports the dependency chart enables by
+    # default — we only accept OTLP from in-cluster.
+    jaeger-compact: { enabled: false }
+    jaeger-thrift:  { enabled: false }
+    jaeger-grpc:    { enabled: false }
+    zipkin:         { enabled: false }
+
+  # Collector configuration — receivers, processors, exporters, pipelines.
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+
+      # Tail-based sampling — decisions are made after a span's full
+      # trace is buffered, so policy can look at the whole trace.
+      # Policies are evaluated in order; first match wins.
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 50000
+        expected_new_traces_per_sec: 100
+        policies:
+          - name: keep-errors
+            type: status_code
+            status_code:
+              status_codes: [ERROR]
+          - name: keep-slow
+            type: latency
+            latency:
+              threshold_ms: 2000
+          - name: random-sample-rest
+            type: probabilistic
+            probabilistic:
+              sampling_percentage: 10
+
+      # Attach k8s metadata to every signal — namespace, pod, node.
+      # The contrib chart wires the required ServiceAccount + RBAC
+      # when this is enabled.
+      k8sattributes:
+        auth_type: serviceAccount
+        passthrough: false
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.node.name
+            - k8s.deployment.name
+          labels:
+            - tag_name: app.kubernetes.io/name
+              key: app.kubernetes.io/name
+              from: pod
+
+    exporters:
+      # Traces → Tempo via OTLP/gRPC, in-cluster plaintext.
+      otlp/tempo:
+        endpoint: tempo.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+        sending_queue:
+          enabled: true
+          queue_size: 5000
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+
+      # Logs → Loki via OTLP/HTTP (Loki 3.x has native OTLP receiver
+      # at /otlp/v1/logs; the otlphttp exporter speaks that protocol
+      # with logs_endpoint set explicitly).
+      otlphttp/loki:
+        endpoint: http://loki.observability.svc.cluster.local:3100/otlp
+        tls:
+          insecure: true
+        sending_queue:
+          enabled: true
+          queue_size: 5000
+
+      # Metrics → kube-prometheus-stack Prometheus via remote-write.
+      # Requires prometheus.prometheusSpec.enableRemoteWriteReceiver
+      # in the KPS values overlay (handled in the same PR).
+      prometheusremotewrite:
+        endpoint: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+        tls:
+          insecure: true
+        sending_queue:
+          enabled: true
+        retry_on_failure:
+          enabled: true
+
+    service:
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          # Collector self-metrics scraped by KPS ServiceMonitor (added
+          # via the dependency chart's serviceMonitor flag below).
+          level: detailed
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [k8sattributes, tail_sampling, batch]
+          exporters: [otlp/tempo]
+        logs:
+          receivers: [otlp]
+          processors: [k8sattributes, batch]
+          exporters: [otlphttp/loki]
+        metrics:
+          receivers: [otlp]
+          processors: [k8sattributes, batch]
+          exporters: [prometheusremotewrite]
+
+  # Enable a ServiceMonitor so kube-prometheus-stack scrapes the
+  # collector's self-metrics endpoint. Useful for spotting dropped
+  # spans / exporter retry storms.
+  serviceMonitor:
+    enabled: true
+
+  # Required for k8sattributes processor to read pod metadata.
+  presets:
+    kubernetesAttributes:
+      enabled: true

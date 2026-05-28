@@ -1,0 +1,28 @@
+apiVersion: v2
+name: bls-otel-collector
+description: |
+  Wrapper chart for the upstream open-telemetry/opentelemetry-collector
+  Helm chart. Configures the contrib distribution as a DaemonSet that
+  receives OTLP from the BLS LLM Gateway and fans out to Tempo (traces),
+  Loki (logs), and the kube-prometheus-stack Prometheus (metrics via
+  remote-write). Tail-based sampling keeps 100% of errors + slow spans,
+  10% of the rest. Backed by ADR-013.
+type: application
+version: 0.1.0
+appVersion: "0.119.0"
+keywords:
+  - opentelemetry
+  - otel
+  - observability
+  - tracing
+maintainers:
+  - name: BLS DevOps
+sources:
+  - https://github.com/CalmAfterReboot/BLS-platform
+dependencies:
+  - name: opentelemetry-collector
+    # Pin to a specific minor; bump in lockstep with the contrib image.
+    # The contrib distribution (not "core") is required for the
+    # `tail_sampling` and `loki` exporter components.
+    version: "0.119.0"
+    repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
