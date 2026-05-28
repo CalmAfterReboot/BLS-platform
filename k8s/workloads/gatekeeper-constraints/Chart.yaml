@@ -1,0 +1,21 @@
+apiVersion: v2
+name: bls-gatekeeper-constraints
+description: |
+  Umbrella chart holding the five initial Gatekeeper ConstraintTemplates
+  + matching Constraints for the BLS platform. Backed by ADR-016
+  ("Policy-as-Code via OPA/Gatekeeper: Five Fitness Functions").
+  Constraints ship at enforcementAction=dryrun in this chart version;
+  a follow-up PR flips them to deny after the baseline violation
+  report is clean (see docs/runbooks/gatekeeper-violations-baseline.md).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - gatekeeper
+  - opa
+  - policy-as-code
+  - fitness-functions
+maintainers:
+  - name: BLS DevOps
+sources:
+  - https://github.com/CalmAfterReboot/BLS-platform

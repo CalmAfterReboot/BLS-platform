@@ -1,0 +1,48 @@
+# Per-constraint toggles + parameters. Each constraint can be turned
+# off independently for staged rollout; all five default to enabled
+# but in dryrun mode (audit-only, no rejection). Flip to deny in a
+# follow-up PR after 24h of clean baseline observation.
+
+enforcementAction: dryrun  # global default — overridable per-constraint below
+
+constraints:
+  pspNoRoot:
+    enabled: true
+    enforcementAction: ""  # falls back to global default
+  requiredLabels:
+    enabled: true
+    enforcementAction: ""
+    labels:
+      - owner
+      - cost-center
+      - environment
+    # Existing in-tree workloads may not yet carry these labels;
+    # the dryrun report will name them. Backfill PR lands alongside
+    # the flip-to-deny PR (see ADR-016 §Consequences).
+  requiredProbes:
+    enabled: true
+    enforcementAction: ""
+    requireLiveness: true
+    requireReadiness: true
+  blockNodePort:
+    enabled: true
+    enforcementAction: ""
+  imageDigestPinned:
+    enabled: true
+    enforcementAction: ""
+    # The exception list from ADR-015 — these packages can use a
+    # plain tag, no @sha256: required.
+    exceptions:
+      - "stefanprodan/podinfo"
+
+# Namespaces excluded from EVERY constraint. Policy engines cannot
+# policy themselves into uninstallability, and the kube-* namespaces
+# host DaemonSets we don't own (kube-proxy, coredns, metrics-server)
+# that would otherwise flag forever.
+excludedNamespaces:
+  - kube-system
+  - kube-public
+  - kube-node-lease
+  - gatekeeper-system
+  # K8s system add-ons that ship without our label conventions
+  - longhorn-system

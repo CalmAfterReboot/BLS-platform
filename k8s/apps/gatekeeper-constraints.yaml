@@ -1,0 +1,46 @@
+# Constraint umbrella chart. Depends on the Gatekeeper Application
+# (k8s/apps/gatekeeper.yaml) being Healthy first — Constraint CRDs
+# are installed by Gatekeeper's chart, ConstraintTemplate CRDs by
+# Gatekeeper itself. Sync order is enforced via the sync-wave
+# annotation: gatekeeper at wave 0 (default), constraints at wave 1.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gatekeeper-constraints
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bls-platform
+    app.kubernetes.io/component: admission-policy
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CalmAfterReboot/BLS-platform
+    targetRevision: HEAD
+    path: k8s/workloads/gatekeeper-constraints
+    helm:
+      releaseName: gatekeeper-constraints
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gatekeeper-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # Allow the Constraint CRDs (installed by the gatekeeper chart)
+      # to be present before applying their instances. Otherwise the
+      # first sync races: Constraints apply before Gatekeeper's
+      # webhook is up.
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

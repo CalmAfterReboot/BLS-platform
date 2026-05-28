@@ -12,6 +12,13 @@ spec:
           revision: HEAD
           directories:
           - path: k8s/workloads/*
+          # Exclude: gatekeeper-constraints is deployed via a standalone
+          # ArgoCD Application at k8s/apps/gatekeeper-constraints.yaml
+          # so the operator can sync-wave it AFTER the gatekeeper
+          # webhook is Healthy. The matrix would generate a duplicate
+          # that races the webhook readiness.
+          - path: k8s/workloads/gatekeeper-constraints
+            exclude: true
       - clusters: {}
   template:
     metadata:
