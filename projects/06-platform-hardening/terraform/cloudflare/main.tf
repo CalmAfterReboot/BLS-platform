@@ -102,7 +102,7 @@ resource "cloudflare_zero_trust_access_policy" "operator" {
   # login_method so no IdP resource is needed. To restore true MFA later,
   # add a Google/GitHub OAuth IdP + `require { auth_method = "mfa" }`.
   include {
-    email = [var.operator_email]
+    email = var.operator_emails
   }
 }
 
