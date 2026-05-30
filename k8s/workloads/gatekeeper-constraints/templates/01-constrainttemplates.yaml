@@ -1,0 +1,192 @@
+{{- /*
+Five ConstraintTemplates per ADR-016. Rego is intentionally compact —
+the same `input_containers` helper covers Pods, Pod templates inside
+workload controllers, and initContainers. Each violation message names
+the offending field so a dryrun report is actionable.
+*/ -}}
+{{- if .Values.constraints.pspNoRoot.enabled }}
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8spspnoroot
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPNoRoot
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8spspnoroot
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          not run_as_non_root(c)
+          msg := sprintf(
+            "Container %v must set securityContext.runAsNonRoot=true (or inherit it from the pod spec)",
+            [c.name],
+          )
+        }
+
+        input_containers[c] { c := input.review.object.spec.containers[_] }
+        input_containers[c] { c := input.review.object.spec.initContainers[_] }
+        input_containers[c] { c := input.review.object.spec.template.spec.containers[_] }
+        input_containers[c] { c := input.review.object.spec.template.spec.initContainers[_] }
+
+        run_as_non_root(c) {
+          c.securityContext.runAsNonRoot == true
+        }
+        run_as_non_root(_) {
+          input.review.object.spec.securityContext.runAsNonRoot == true
+        }
+        run_as_non_root(_) {
+          input.review.object.spec.template.spec.securityContext.runAsNonRoot == true
+        }
+{{- end }}
+{{- if .Values.constraints.requiredLabels.enabled }}
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredlabels
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            labels:
+              type: array
+              items: { type: string }
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredlabels
+
+        violation[{"msg": msg}] {
+          provided := {label | input.review.object.metadata.labels[label]}
+          required := {label | label := input.parameters.labels[_]}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf(
+            "Resource %v/%v missing required labels: %v",
+            [input.review.object.kind, input.review.object.metadata.name, sort(missing)],
+          )
+        }
+{{- end }}
+{{- if .Values.constraints.requiredProbes.enabled }}
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredprobes
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredProbes
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            requireLiveness:  { type: boolean }
+            requireReadiness: { type: boolean }
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredprobes
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          input.parameters.requireLiveness == true
+          not c.livenessProbe
+          msg := sprintf("Container %v missing livenessProbe", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          input.parameters.requireReadiness == true
+          not c.readinessProbe
+          msg := sprintf("Container %v missing readinessProbe", [c.name])
+        }
+
+        input_containers[c] { c := input.review.object.spec.template.spec.containers[_] }
+        input_containers[c] { c := input.review.object.spec.containers[_] }
+{{- end }}
+{{- if .Values.constraints.blockNodePort.enabled }}
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sblocknodeport
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sBlockNodePort
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sblocknodeport
+
+        violation[{"msg": msg}] {
+          input.review.object.spec.type == "NodePort"
+          msg := sprintf(
+            "Service %v/%v has spec.type=NodePort; use ClusterIP (with Cloudflare Tunnel for public exposure per ADR-012)",
+            [input.review.object.metadata.namespace, input.review.object.metadata.name],
+          )
+        }
+{{- end }}
+{{- if .Values.constraints.imageDigestPinned.enabled }}
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8simagedigestpinned
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sImageDigestPinned
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            exceptions:
+              type: array
+              items: { type: string }
+              description: |
+                Image repositories (without tag/digest) allowed to use a
+                plain tag instead of @sha256:. Matched as a prefix.
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8simagedigestpinned
+
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          not has_digest(c.image)
+          not is_excepted(c.image)
+          msg := sprintf(
+            "Container %v image %v is not digest-pinned (must include @sha256:); see ADR-015",
+            [c.name, c.image],
+          )
+        }
+
+        input_containers[c] { c := input.review.object.spec.containers[_] }
+        input_containers[c] { c := input.review.object.spec.initContainers[_] }
+        input_containers[c] { c := input.review.object.spec.template.spec.containers[_] }
+        input_containers[c] { c := input.review.object.spec.template.spec.initContainers[_] }
+
+        has_digest(image) {
+          contains(image, "@sha256:")
+        }
+
+        is_excepted(image) {
+          exception := input.parameters.exceptions[_]
+          startswith(image, exception)
+        }
+{{- end }}

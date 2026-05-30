@@ -1,7 +1,13 @@
 namespace: llm-gateway
 
 gateway:
-  image: ghcr.io/calmafterreboot/bls-llm-gateway:latest
+  # Pinned to digest per ADR-015. The :latest tag is mutable and
+  # the build-gateway.yaml workflow overwrites it on every merge to
+  # main; pinning prevents an ArgoCD self-heal from silently
+  # rolling forward to an unreviewed image.
+  # Resolved 2026-05-28 from tag :latest via:
+  #   docker buildx imagetools inspect ghcr.io/calmafterreboot/bls-llm-gateway:latest
+  image: ghcr.io/calmafterreboot/bls-llm-gateway@sha256:c67e10e8b93d69f616d05380151ffc1a5a95a47992c567f3a2030fafc03b0513
   replicas: 1
   resources:
     requests:
@@ -12,7 +18,11 @@ gateway:
       memory: 512Mi
 
 litellm:
-  image: ghcr.io/berriai/litellm:main-latest
+  # Pinned to multi-arch index digest per ADR-015. The :main-latest
+  # tag is overwritten on every push to LiteLLM's main branch.
+  # Resolved 2026-05-28 from tag :main-latest via:
+  #   docker buildx imagetools inspect ghcr.io/berriai/litellm:main-latest
+  image: ghcr.io/berriai/litellm@sha256:7c311546c25e7bb6e8cafede9fcd3d0d622ac636b5c9418befaa32e85dfb0186
   replicas: 1
   port: 4000
   resources:
@@ -24,7 +34,11 @@ litellm:
       memory: 2Gi
 
 redis:
-  image: redis:7-alpine
+  # Pinned to multi-arch index digest per ADR-015. Docker Hub's
+  # :7-alpine tag floats forward inside the 7.x line.
+  # Resolved 2026-05-28 from tag :7-alpine via:
+  #   docker buildx imagetools inspect redis:7-alpine
+  image: redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
   resources:
     requests:
       cpu: 50m

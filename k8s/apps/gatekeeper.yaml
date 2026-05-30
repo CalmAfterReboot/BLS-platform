@@ -1,0 +1,73 @@
+# OPA/Gatekeeper admission controller. Installed via the upstream
+# open-policy-agent/gatekeeper Helm chart. Namespace: gatekeeper-system.
+# See ADR-016 for the policy-as-code rationale and the five initial
+# ConstraintTemplates (shipped via k8s/apps/gatekeeper-constraints.yaml).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gatekeeper
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bls-platform
+    app.kubernetes.io/component: admission-policy
+spec:
+  project: default
+  source:
+    repoURL: https://open-policy-agent.github.io/gatekeeper/charts
+    chart: gatekeeper
+    # Pinned to current stable (resolved from the live chart repo in the
+    # p6 currency pass). Renovate manages future bumps (helm-charts group).
+    targetRevision: "3.22.2"
+    helm:
+      releaseName: gatekeeper
+      values: |
+        # Webhook resource ceilings — too low and admission stalls
+        # the cluster's reconciles under load.
+        replicas: 2
+        controllerManager:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+        audit:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+        # failurePolicy=Ignore so a Gatekeeper outage does not
+        # block reconciles cluster-wide. This is a deliberate
+        # availability-over-policy trade-off (ADR-016 review trigger #2).
+        # Re-evaluate if Gatekeeper proves stable enough to flip to Fail.
+        validatingWebhookFailurePolicy: Ignore
+        # Mutation webhook is off — we are only doing validation
+        # in this iteration. Enable when a mutation use case appears.
+        enableMutation: false
+        # Audit interval — the periodic scan that populates each
+        # Constraint's .status.violations array. 60s is the chart
+        # default; explicit here to surface the knob.
+        auditInterval: 60
+        constraintViolationsLimit: 100
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gatekeeper-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m

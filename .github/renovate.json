@@ -1,0 +1,87 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "schedule": ["before 6am on Monday"],
+  "timezone": "Europe/London",
+  "labels": ["renovate", "dependencies"],
+  "automerge": false,
+  "rebaseWhen": "conflicted",
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 8,
+  "dependencyDashboardAutoclose": true,
+  "kubernetes": {
+    "fileMatch": [
+      "k8s/.+\\.ya?ml$",
+      "k8s/workloads/.+/values\\.ya?ml$"
+    ]
+  },
+  "helm-values": {
+    "fileMatch": [
+      "k8s/workloads/.+/values\\.ya?ml$",
+      "05-observability-security/values/.+\\.ya?ml$"
+    ]
+  },
+  "argocd": {
+    "fileMatch": ["k8s/apps/.+\\.ya?ml$"]
+  },
+  "packageRules": [
+    {
+      "description": "Always pin Kubernetes container images to immutable digest. Renovate will append :tag as a comment automatically.",
+      "matchManagers": ["kubernetes", "helm-values", "argocd"],
+      "matchDatasources": ["docker"],
+      "pinDigests": true
+    },
+    {
+      "description": "Group all Kubernetes container image bumps into one PR per week so review effort stays bounded.",
+      "matchManagers": ["kubernetes", "helm-values"],
+      "matchDatasources": ["docker"],
+      "groupName": "kubernetes images (weekly digest sweep)",
+      "groupSlug": "k8s-images",
+      "schedule": ["before 6am on Monday"]
+    },
+    {
+      "description": "Helm charts get their own group — separate review cycle from container images.",
+      "matchManagers": ["argocd", "helm-values"],
+      "matchDatasources": ["helm"],
+      "groupName": "helm charts",
+      "groupSlug": "helm-charts",
+      "schedule": ["before 6am on the first day of the month"]
+    },
+    {
+      "description": "Vulnerability fixes ship outside the normal cadence. Renovate's vulnerabilityAlerts override the schedule.",
+      "matchUpdateTypes": ["pin", "digest"],
+      "vulnerabilityAlerts": {
+        "enabled": true,
+        "schedule": ["at any time"],
+        "labels": ["renovate", "security"]
+      }
+    },
+    {
+      "description": "Explicitly do NOT pin podinfo. ADR-015 keeps it on a floating tag as a portfolio demo dependency.",
+      "matchPackageNames": ["stefanprodan/podinfo"],
+      "pinDigests": false,
+      "enabled": true
+    },
+    {
+      "description": "Major-version Helm chart bumps require human review — never auto-merge.",
+      "matchManagers": ["argocd", "helm-values"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["renovate", "helm-major", "needs-review"]
+    },
+    {
+      "description": "OpenTelemetry instrumentation libraries are on the 0.x train; treat minor bumps as major (breaking changes are common).",
+      "matchManagers": ["pip_requirements"],
+      "matchPackageNames": ["/^opentelemetry-instrumentation-/"],
+      "matchUpdateTypes": ["minor"],
+      "labels": ["renovate", "otel", "needs-review"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  }
+}

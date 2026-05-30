@@ -1,0 +1,97 @@
+{{- /*
+The five matching Constraints. Each one names the ConstraintTemplate it
+binds (apiVersion: constraints.gatekeeper.sh/v1beta1, kind matches the
+template's CRD kind), declares which Kubernetes kinds it watches via
+spec.match.kinds, excludes the operator-curated namespace list, and
+sets enforcementAction (dryrun by default — see values.yaml).
+*/ -}}
+{{- $enforce := .Values.enforcementAction | default "dryrun" -}}
+{{- $excluded := .Values.excludedNamespaces -}}
+{{- if .Values.constraints.pspNoRoot.enabled }}
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPSPNoRoot
+metadata:
+  name: psp-no-root
+spec:
+  enforcementAction: {{ .Values.constraints.pspNoRoot.enforcementAction | default $enforce }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet", "ReplicaSet"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
+    excludedNamespaces: {{ toYaml $excluded | nindent 6 }}
+{{- end }}
+{{- if .Values.constraints.requiredLabels.enabled }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredLabels
+metadata:
+  name: required-labels
+spec:
+  enforcementAction: {{ .Values.constraints.requiredLabels.enforcementAction | default $enforce }}
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+      - apiGroups: [""]
+        kinds: ["Service", "ConfigMap", "Secret"]
+      - apiGroups: ["networking.k8s.io"]
+        kinds: ["Ingress", "NetworkPolicy"]
+    excludedNamespaces: {{ toYaml $excluded | nindent 6 }}
+  parameters:
+    labels: {{ toYaml .Values.constraints.requiredLabels.labels | nindent 6 }}
+{{- end }}
+{{- if .Values.constraints.requiredProbes.enabled }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredProbes
+metadata:
+  name: required-probes
+spec:
+  enforcementAction: {{ .Values.constraints.requiredProbes.enforcementAction | default $enforce }}
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+    excludedNamespaces: {{ toYaml $excluded | nindent 6 }}
+  parameters:
+    requireLiveness:  {{ .Values.constraints.requiredProbes.requireLiveness }}
+    requireReadiness: {{ .Values.constraints.requiredProbes.requireReadiness }}
+{{- end }}
+{{- if .Values.constraints.blockNodePort.enabled }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sBlockNodePort
+metadata:
+  name: block-nodeport
+spec:
+  enforcementAction: {{ .Values.constraints.blockNodePort.enforcementAction | default $enforce }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Service"]
+    excludedNamespaces: {{ toYaml $excluded | nindent 6 }}
+{{- end }}
+{{- if .Values.constraints.imageDigestPinned.enabled }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sImageDigestPinned
+metadata:
+  name: image-digest-pinned
+spec:
+  enforcementAction: {{ .Values.constraints.imageDigestPinned.enforcementAction | default $enforce }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet", "ReplicaSet"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
+    excludedNamespaces: {{ toYaml $excluded | nindent 6 }}
+  parameters:
+    exceptions: {{ toYaml .Values.constraints.imageDigestPinned.exceptions | nindent 6 }}
+{{- end }}
