@@ -17,7 +17,9 @@ spec:
   source:
     repoURL: https://open-policy-agent.github.io/gatekeeper/charts
     chart: gatekeeper
-    targetRevision: "3.18.0"
+    # Pinned to current stable (resolved from the live chart repo in the
+    # p6 currency pass). Renovate manages future bumps (helm-charts group).
+    targetRevision: "3.22.2"
     helm:
       releaseName: gatekeeper
       values: |
