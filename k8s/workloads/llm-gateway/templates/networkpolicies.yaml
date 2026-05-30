@@ -65,6 +65,16 @@ spec:
       ports:
         - port: 8000
           protocol: TCP
+    # Public ingress: the cloudflared tunnel (Cloudflare Zero Trust,
+    # ADR-012) reaches the gateway on :8000. cloudflared is the
+    # "ingress controller" the comment above anticipated.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cloudflared
+      ports:
+        - port: 8000
+          protocol: TCP
   egress:
     - to:
         - podSelector:

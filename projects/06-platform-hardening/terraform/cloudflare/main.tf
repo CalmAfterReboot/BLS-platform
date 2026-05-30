@@ -35,6 +35,14 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "this" {
       content {
         hostname = "${ingress_rule.key}.${var.zone_name}"
         service  = ingress_rule.value
+        # HTTPS upstreams (e.g. argocd-server with its self-signed cert)
+        # get no_tls_verify so cloudflared doesn't reject the cert.
+        dynamic "origin_request" {
+          for_each = startswith(ingress_rule.value, "https://") ? [1] : []
+          content {
+            no_tls_verify = true
+          }
+        }
       }
     }
 
