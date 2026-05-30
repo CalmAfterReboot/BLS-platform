@@ -1,0 +1,18 @@
+{
+  "captured_at_utc": "2026-05-23T22:56:51+00:00",
+  "openai_model_env": "gpt-4o-mini (default)",
+  "request": {
+    "max_tokens": 8,
+    "prompt": "Reply with the single word: pong",
+    "tier": "premium"
+  },
+  "response": {
+    "attempts": 1,
+    "completion": "Pong",
+    "failover_occurred": false,
+    "latency_ms": 2380.917151000176,
+    "provider_used": "openai",
+    "tier": "premium"
+  },
+  "scenario": "happy-path"
+}

@@ -34,7 +34,10 @@ redis:
       memory: 128Mi
 
 ingress:
-  enabled: true
+  # Deferred to Week 4 cert-manager + IngressRoute pairing.
+  # k3s ships with --disable traefik in this cluster, so an Ingress with
+  # className: traefik has no controller to claim it (orphan resource).
+  enabled: false
   className: traefik
   host: llm-gateway.local
   tls: false

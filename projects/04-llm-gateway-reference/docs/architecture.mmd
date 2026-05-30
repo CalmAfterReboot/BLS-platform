@@ -1,0 +1,52 @@
+flowchart TD
+    Client["Client"] -->|"POST /v1/complete<br/>(prompt, tier, max_tokens)"| API["FastAPI app<br/>app/main.py"]
+
+    API --> Validate{"Pydantic<br/>CompletionRequest<br/>valid?"}
+    Validate -->|"invalid tier<br/>or empty prompt"| R422["HTTP 422<br/>validation error"]
+    Validate -->|"valid"| Router["Router.route<br/>app/routing.py"]
+
+    Router --> Resolve["Resolve effective chain<br/>(TIER_CHAINS filtered<br/>by registered providers)"]
+    Resolve -.->|"reads"| Chains
+    Resolve --> Loop["For each (index, provider_name)<br/>in effective chain"]
+    Loop --> Call["asyncio.wait_for(<br/>provider.complete(prompt, max_tokens),<br/>timeout = settings.request_timeout_seconds)"]
+    Call -.->|"dispatches to one of"| Providers
+    Call --> Outcome{"Result"}
+
+    Outcome -->|"ProviderResponse"| Success["Build CompletionResponse<br/>provider_used,<br/>failover_occurred = (index > 0),<br/>attempts, latency_ms"]
+    Outcome -->|"UpstreamError<br/>or asyncio.TimeoutError"| Next["Log warning,<br/>continue to next provider"]
+    Next --> Loop
+
+    Loop -->|"chain exhausted"| AllFail["raise AllProvidersFailedError(tier, attempts)"]
+    AllFail --> R503["HTTP 503<br/>error envelope:<br/>type, message, tier, attempts"]
+
+    Success --> R200["HTTP 200<br/>CompletionResponse JSON"]
+    R200 --> Client
+    R422 --> Client
+    R503 --> Client
+
+    subgraph Chains["TIER_CHAINS — static policy (app/routing.py)"]
+        EC["economy: mock_fast → mock_premium"]
+        PR["premium: openai → mock_premium"]
+    end
+
+    subgraph Providers["Provider registry — app/providers/registry.py"]
+        MF["mock_fast<br/>(MockProvider)"]
+        MP["mock_premium<br/>(MockProvider)"]
+        OAI["openai (OpenAIProvider)<br/>registered only if<br/>OPENAI_API_KEY is set"]
+    end
+
+    subgraph Roadmap["Roadmap — NOT built in v0.1.0"]
+        direction LR
+        LL["LiteLLM<br/>multi-provider routing"]
+        Cache["Redis<br/>response cache"]
+        More["Additional providers:<br/>Ollama, Azure OpenAI, DeepSeek"]
+    end
+
+    style Roadmap fill:#fff4e6,stroke:#d97706,stroke-dasharray: 5 5
+    style LL fill:#ffffff,stroke:#d97706
+    style Cache fill:#ffffff,stroke:#d97706
+    style More fill:#ffffff,stroke:#d97706
+    style R422 fill:#fee2e2,stroke:#dc2626
+    style R503 fill:#fee2e2,stroke:#dc2626
+    style R200 fill:#dcfce7,stroke:#16a34a
+    style OAI stroke-dasharray: 4 4

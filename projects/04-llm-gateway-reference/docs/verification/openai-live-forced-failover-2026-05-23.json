@@ -1,0 +1,25 @@
+{
+  "captured_at_utc": "2026-05-23T22:56:52+00:00",
+  "extras": {
+    "forced_condition": {
+      "expected_upstream_error": "model_not_found",
+      "patched_attribute": "OpenAIProvider._model",
+      "value": "does-not-exist-2026-bls-test"
+    }
+  },
+  "openai_model_env": "gpt-4o-mini (default)",
+  "request": {
+    "max_tokens": 8,
+    "prompt": "Reply with the single word: pong",
+    "tier": "premium"
+  },
+  "response": {
+    "attempts": 2,
+    "completion": "[mock_premium] echo (max_tokens=8): Reply with the single word: pong",
+    "failover_occurred": true,
+    "latency_ms": 136.3795110000865,
+    "provider_used": "mock_premium",
+    "tier": "premium"
+  },
+  "scenario": "forced-failover"
+}

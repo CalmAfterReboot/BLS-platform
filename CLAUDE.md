@@ -11,7 +11,7 @@
 | P3 | Multi-cluster GitOps — ArgoCD ApplicationSets, Helm | Done |
 | P4 | LLM Gateway — FastAPI + LiteLLM + Redis, Helm, ArgoCD, Ollama on Proxmox | Done |
 | P5 | Observability + Security — kube-prometheus-stack, Grafana, Sealed Secrets, NetworkPolicy, workload PrometheusRules | Done |
-| P6 | Platform Engineering — OPA/Gatekeeper, Azure OpenAI, GCP Terraform, BLS site widget | In Progress |
+| P6 | Platform Engineering — OPA/Gatekeeper, Azure OpenAI, GCP Terraform, BLS site widget | Not started — consolidation landing now |
 
 ## Engineering Standards
 - Everything in Git. Conventional commits. PRs only, no direct main commits.

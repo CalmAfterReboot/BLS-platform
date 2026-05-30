@@ -55,3 +55,56 @@ OPERATOR-PRIVATE.md
 # locally-encrypted artefact). Safety net — the backup itself is encrypted
 # at rest, but it has no place in git regardless.
 *.gpg
+
+# Python (merged from projects/04-llm-gateway-reference/.gitignore, dedup'd
+# against the existing .env rule above). Applies repo-wide so any Python
+# work-unit added later (eval harness, additional reference impls, etc.)
+# does not need its own .gitignore.
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.env.*
+!.env.example
+.venv
+venv/
+env/
+ENV/
+.python-version
+
+# IDE (merged from projects/04-llm-gateway-reference/.gitignore).
+.idea/
+.vscode/
+*.swp
+*.swo
