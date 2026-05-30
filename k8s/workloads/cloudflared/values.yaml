@@ -25,7 +25,9 @@ resources:
 # tunnel_id is then either committed to a values overlay or supplied
 # via `--set tunnel.id=...` at the ArgoCD Application level.
 tunnel:
-  id: ""  # MUST be set before this chart will render usefully
+  # Set at go-live from `terraform output -raw tunnel_id` of the
+  # cloudflare module (bls-platform tunnel, created 2026-05-30).
+  id: "79d85a9d-673e-4d39-b99b-29162f9120f7"
 
 # Service routes published by the tunnel. Must match the ingress
 # rules declared in the Cloudflare tunnel config (see
