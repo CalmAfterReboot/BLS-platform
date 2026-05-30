@@ -25,7 +25,11 @@ variable "hostnames" {
   type        = map(string)
   default = {
     "grafana" = "http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80"
-    "argocd"  = "http://argocd-server.argocd.svc.cluster.local:80"
+    # argocd-server redirects HTTP->HTTPS (307); forwarding plain HTTP
+    # behind the TLS-terminating tunnel causes a redirect loop. Send it
+    # over HTTPS instead — no_tls_verify is set for https upstreams in
+    # the tunnel config (main.tf) since argocd-server uses a self-signed cert.
+    "argocd" = "https://argocd-server.argocd.svc.cluster.local:443"
     # Verified against the live cluster: the gateway Service is
     # `llm-gateway-service` on :8000 (not `gateway:80`).
     "gateway" = "http://llm-gateway-service.llm-gateway.svc.cluster.local:8000"
