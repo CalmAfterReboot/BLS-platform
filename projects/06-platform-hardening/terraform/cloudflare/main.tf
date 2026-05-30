@@ -58,12 +58,13 @@ resource "cloudflare_record" "tunnel" {
   comment = "Managed by terraform — ${var.tunnel_name} tunnel"
 }
 
-# One-time-PIN identity provider for the recruiter policy.
-resource "cloudflare_zero_trust_access_identity_provider" "otp" {
-  account_id = var.account_id
-  name       = "one-time-pin"
-  type       = "onetimepin"
-}
+# NOTE: we deliberately do NOT manage a one-time-PIN identity provider
+# resource. Cloudflare Zero Trust ships a built-in One-Time-PIN login
+# method enabled by default on every account, so the email-PIN flow is
+# available without an IdP resource — and creating one via the API needs
+# the "Access: Organizations, Identity Providers, and Groups" token scope
+# that this token does not carry. Relying on the built-in method keeps
+# go-live unblocked with the existing token scopes.
 
 # One Access application per hostname.
 resource "cloudflare_zero_trust_access_application" "app" {
@@ -76,7 +77,9 @@ resource "cloudflare_zero_trust_access_application" "app" {
   session_duration          = each.key == "grafana" ? "${var.recruiter_session_minutes}m" : "${var.operator_session_hours}h"
   auto_redirect_to_identity = false
   app_launcher_visible      = false
-  allowed_idps              = each.key == "grafana" ? [cloudflare_zero_trust_access_identity_provider.otp.id] : []
+  # Empty = all enabled account login methods are offered. With only the
+  # built-in One-Time-PIN enabled, every app presents the email-PIN flow.
+  allowed_idps = []
 
   depends_on = [cloudflare_record.tunnel]
 }
@@ -91,19 +94,15 @@ resource "cloudflare_zero_trust_access_policy" "operator" {
   precedence     = 1
   decision       = "allow"
 
+  # The gate is the email include above: only the operator's email is
+  # allowed, authenticated via the account's built-in One-Time-PIN.
+  # No `require` block — the original auth_method=mfa was dropped (no
+  # MFA IdP configured; it would lock the operator out of argocd/gateway
+  # which have no fallback policy), and we don't pin a specific
+  # login_method so no IdP resource is needed. To restore true MFA later,
+  # add a Google/GitHub OAuth IdP + `require { auth_method = "mfa" }`.
   include {
     email = [var.operator_email]
-  }
-
-  # Gate to the operator email, authenticated via the one-time-PIN IdP.
-  # The hard `auth_method = "mfa"` requirement was dropped because no
-  # MFA-capable IdP is configured yet — it would lock the operator out
-  # of argocd/gateway (which have no fallback policy). To restore true
-  # MFA later, add a Google/GitHub OAuth IdP and switch this back to
-  # `require { auth_method = "mfa" }`. The email include keeps this
-  # scoped to the operator regardless of login method.
-  require {
-    login_method = [cloudflare_zero_trust_access_identity_provider.otp.id]
   }
 }
 
@@ -115,11 +114,10 @@ resource "cloudflare_zero_trust_access_policy" "recruiters" {
   precedence     = 2
   decision       = "allow"
 
+  # Everyone may request access; the built-in One-Time-PIN means each
+  # visitor must prove control of an email before the policy passes.
+  # 1-hour session is set on the grafana application (session_duration).
   include {
     everyone = true
-  }
-
-  require {
-    login_method = [cloudflare_zero_trust_access_identity_provider.otp.id]
   }
 }
