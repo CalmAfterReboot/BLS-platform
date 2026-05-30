@@ -1,0 +1,43 @@
+# Standalone ArgoCD Application for the bls-otel-collector wrapper chart
+# at k8s/workloads/otel-collector/. The wrapper Chart.yaml depends on
+# the upstream open-telemetry/opentelemetry-collector chart; ArgoCD
+# runs `helm dependency build` automatically at sync time.
+#
+# Note: the matrix ApplicationSet at k8s/apps/app-of-apps.yaml would
+# auto-generate an `otel-collector-in-cluster` Application for the same
+# path — we explicitly exclude this dir in the ApplicationSet so this
+# standalone Application is the single source of truth for otel-collector.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel-collector
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bls-platform
+    app.kubernetes.io/component: telemetry-fanout
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CalmAfterReboot/BLS-platform
+    targetRevision: HEAD
+    path: k8s/workloads/otel-collector
+    helm:
+      releaseName: otel-collector
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m

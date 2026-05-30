@@ -1,0 +1,45 @@
+# Tempo values — single-binary tempo for portfolio scale.
+# Chart: grafana-community/tempo @ 2.x (the maintained OSS successor;
+# grafana/tempo single-binary was deprecated in 2026). Tempo
+# appVersion 2.10.x. Render-verified against this file. Storage: local
+# filesystem on a 10 GiB PVC. Retention: 72 h per spec — traces grow fast.
+# Documented portfolio-scope limitation: this won't scale beyond a
+# single-node ingest rate. Production = tempo-distributed + S3.
+# See ADR-013 §"Storage trade-offs".
+
+tempo:
+  retention: 72h
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+
+  # Resource ceiling — tempo's memory grows with concurrent trace cardinality.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # Enable OTLP receivers (gRPC + HTTP). The otel-collector forwards traces
+  # over gRPC by default; HTTP is here as a fallback / direct-from-SDK path.
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+persistence:
+  enabled: true
+  size: 10Gi
+  accessModes:
+    - ReadWriteOnce
+
+# kube-prometheus-stack scrapes tempo's self-metrics.
+serviceMonitor:
+  enabled: true

@@ -25,6 +25,16 @@ data:
     litellm_settings:
       drop_params: true
       request_timeout: 120
+      # OTel callback emits per-request spans + metrics for every
+      # provider call LiteLLM makes. Exports via OTLP/gRPC to the
+      # endpoint in OTEL_EXPORTER_OTLP_ENDPOINT (default points at
+      # the in-cluster otel-collector — see ADR-013). Service name
+      # comes from OTEL_SERVICE_NAME (default bls-llm-gateway-litellm
+      # to distinguish from the FastAPI edge layer's traces).
+      # GenAI semantic conventions (gen_ai.* attributes) are emitted
+      # automatically by LiteLLM v1.40+ when the otel callback is
+      # active; see ADR-014 for the adoption posture and known gaps.
+      callbacks: ["otel"]
     general_settings:
       disable_spend_logs: true
       disable_reset_budget: true

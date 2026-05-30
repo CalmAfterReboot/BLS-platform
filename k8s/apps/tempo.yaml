@@ -1,0 +1,46 @@
+# Standalone ArgoCD Application for Tempo — multi-source pattern.
+# Tempo is deployed in `observability` namespace alongside Loki.
+#
+# Repo note: grafana/tempo (single-binary) was DEPRECATED in 2026; the
+# maintained successor lives at grafana-community/helm-charts (chart
+# 2.x, Tempo appVersion 2.10.x). Values render-verified against the
+# existing 05-observability-security/values/tempo.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: bls-platform
+    app.kubernetes.io/component: traces
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana-community.github.io/helm-charts
+      chart: tempo
+      targetRevision: "2.2.0"
+      helm:
+        releaseName: tempo
+        valueFiles:
+          - $values/05-observability-security/values/tempo.yaml
+    - repoURL: https://github.com/CalmAfterReboot/BLS-platform
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m

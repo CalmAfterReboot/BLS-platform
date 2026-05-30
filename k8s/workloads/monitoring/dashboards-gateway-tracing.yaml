@@ -1,0 +1,122 @@
+# LLM Gateway tracing/logging/metrics dashboard.
+# Auto-imported by the kube-prometheus-stack Grafana sidecar (which
+# watches for ConfigMaps labelled grafana_dashboard). Five panels per
+# the p6.2 spec; the cost-per-1k-tokens panel is a placeholder
+# pending Sequence 4 (bls.cost_gbp_* custom attributes — ADR-014).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboards-gateway-tracing
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  gateway-tracing.json: |
+    {
+      "title": "BLS LLM Gateway — Tracing, Logs, Metrics",
+      "uid": "bls-gateway-tracing",
+      "tags": ["bls", "llm-gateway", "otel", "tracing"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": { "list": [] },
+      "annotations": { "list": [] },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Request rate by route",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (handler) (rate(http_requests_total{namespace=\"llm-gateway\"}[5m]))",
+              "legendFormat": "{{handler}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "reqps", "min": 0 },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" }
+          }
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "p95 latency by provider",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket[5m])))",
+              "legendFormat": "{{model}} p95"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "s", "min": 0 },
+            "overrides": []
+          }
+        },
+        {
+          "id": 3,
+          "type": "traces",
+          "title": "Recent traces — bls-llm-gateway",
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "refId": "A",
+              "queryType": "traceqlSearch",
+              "filters": [
+                {
+                  "id": "service-name",
+                  "tag": "service.name",
+                  "operator": "=",
+                  "scope": "resource",
+                  "value": ["bls-llm-gateway", "bls-llm-gateway-litellm"],
+                  "valueType": "string"
+                }
+              ],
+              "limit": 20
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "logs",
+          "title": "Recent logs — llm-gateway namespace",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 18 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{k8s_namespace_name=\"llm-gateway\"} |= ``",
+              "queryType": "range"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending"
+          }
+        },
+        {
+          "id": 5,
+          "type": "text",
+          "title": "Cost per 1k tokens by provider — DEFERRED to Sequence 4",
+          "gridPos": { "h": 4, "w": 24, "x": 0, "y": 28 },
+          "options": {
+            "mode": "markdown",
+            "content": "**Pending Sequence 4.** Will render `bls.cost_gbp_per_1k_input_tokens` and `bls.cost_gbp_per_1k_output_tokens` custom attributes set by the LiteLLM OTel callback (per [ADR-014](/d/bls-gateway-tracing)). The attributes don't exist in this PR — Sequence 4 adds the custom-cost calculator that emits them. This placeholder is intentional so the dashboard layout is final and only the queries swap in later."
+          }
+        }
+      ]
+    }
