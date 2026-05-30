@@ -15,9 +15,9 @@ variable "tunnel_name" {
   default     = "bls-platform"
 }
 
-variable "operator_email" {
-  description = "Email address that receives Cloudflare Access via MFA on all three apps (Operator policy, 24h session)."
-  type        = string
+variable "operator_emails" {
+  description = "Email addresses allowed on all three apps via the Operator policy (one-time-PIN, 24h session). Any of these emails may authenticate."
+  type        = list(string)
 }
 
 variable "hostnames" {
