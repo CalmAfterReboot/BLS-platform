@@ -1,0 +1,14 @@
+apiVersion: v2
+name: cloudflared
+description: Cloudflare Tunnel daemon (cloudflared) for the BLS platform. Publishes grafana/argocd/gateway via Cloudflare Zero Trust. Backed by ADR-012.
+type: application
+version: 0.1.0
+appVersion: "2026.5.0"
+keywords:
+  - cloudflare
+  - tunnel
+  - zero-trust
+maintainers:
+  - name: BLS DevOps
+sources:
+  - https://github.com/CalmAfterReboot/BLS-platform

@@ -1,0 +1,11 @@
+# Copy to `terraform.tfvars` (gitignored) and fill in.
+# Plan with: terraform plan -var-file=terraform.tfvars
+
+account_id     = "<cloudflare_account_id>"
+operator_email = "<operator_email>"
+
+# Optional overrides (defaults from variables.tf are usually fine).
+# zone_name                 = "bluelayersystems.com"
+# tunnel_name               = "bls-platform"
+# recruiter_session_minutes = 60
+# operator_session_hours    = 24

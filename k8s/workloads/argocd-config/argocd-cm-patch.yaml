@@ -1,0 +1,23 @@
+# Strategic merge patch for the argocd-cm ConfigMap.
+# Apply with:
+#   kubectl -n argocd patch configmap argocd-cm --patch-file argocd-cm-patch.yaml
+# (See docs/runbooks/cloudflared-tunnel.md §"ArgoCD viewonly account setup".)
+#
+# This is intentionally narrow: it adds ONE new key (accounts.viewonly).
+# It does not replace any existing argocd-cm content.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Enables the 'viewonly' local account with both UI login and API
+  # token. Password is set out-of-band via:
+  #   argocd account update-password \
+  #     --account viewonly \
+  #     --new-password <store-in-sealed-secret-or-1password>
+  accounts.viewonly: "login, apiKey"
+  accounts.viewonly.enabled: "true"

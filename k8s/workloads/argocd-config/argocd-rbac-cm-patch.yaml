@@ -1,0 +1,36 @@
+# Strategic merge patch for the argocd-rbac-cm ConfigMap.
+# Apply with:
+#   kubectl -n argocd patch configmap argocd-rbac-cm --patch-file argocd-rbac-cm-patch.yaml
+# (See docs/runbooks/cloudflared-tunnel.md §"ArgoCD viewonly account setup".)
+#
+# Adds role:viewonly with read-only verbs and grants it to the viewonly
+# account declared in argocd-cm-patch.yaml. Does NOT touch any other
+# policy line in argocd-rbac-cm.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # NOTE: this patch ASSUMES policy.csv either does not yet exist or
+  # only contains the default empty value. If the live CM already has
+  # a custom policy.csv, MERGE this content into it manually (kubectl
+  # patch with strategic merge will overwrite the key, not append).
+  # The runbook covers the safe-merge variant using `kubectl get cm
+  # argocd-rbac-cm -o yaml > before.yaml` first.
+  policy.default: role:''
+  policy.csv: |
+    # viewonly role — read-only across applications / projects /
+    # repositories / clusters. NO apps:sync, NO applicationsets:*,
+    # NO exec, NO accounts:update. Safe to grant to a public-route
+    # credential (defense in depth behind Cloudflare Access).
+    p, role:viewonly, applications, get, */*, allow
+    p, role:viewonly, projects, get, *, allow
+    p, role:viewonly, repositories, get, *, allow
+    p, role:viewonly, clusters, get, *, allow
+    p, role:viewonly, logs, get, */*, allow
+
+    g, viewonly, role:viewonly

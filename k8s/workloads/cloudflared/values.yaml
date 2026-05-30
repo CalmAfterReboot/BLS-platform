@@ -1,0 +1,42 @@
+namespace: cloudflared
+
+image:
+  # Pinned to the version installed on the operator workstation
+  # (`cloudflared --version` → 2026.5.0). Bump in lockstep with the
+  # workstation CLI to keep tunnel-credential format compatibility.
+  # Image-digest pinning is a known gap (see audit §3 / chart README
+  # of llm-gateway) — to be hardened in a follow-up.
+  repository: cloudflare/cloudflared
+  tag: "2026.5.0"
+  pullPolicy: IfNotPresent
+
+replicas: 2
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# Tunnel UUID. Filled in by the operator after `terraform apply` of
+# projects/06-platform-hardening/terraform/cloudflare/ — the
+# tunnel_id is then either committed to a values overlay or supplied
+# via `--set tunnel.id=...` at the ArgoCD Application level.
+tunnel:
+  id: ""  # MUST be set before this chart will render usefully
+
+# Service routes published by the tunnel. Must match the ingress
+# rules declared in the Cloudflare tunnel config (see
+# projects/06-platform-hardening/terraform/cloudflare/variables.tf).
+ingress:
+  - hostname: grafana.bluelayersystems.com
+    service: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80
+  - hostname: argocd.bluelayersystems.com
+    service: http://argocd-server.argocd.svc.cluster.local:80
+  - hostname: gateway.bluelayersystems.com
+    service: http://llm-gateway-service.llm-gateway.svc.cluster.local:8000
+
+networkPolicies:
+  enabled: true
