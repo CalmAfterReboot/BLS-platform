@@ -9,7 +9,7 @@ description: |
   10% of the rest. Backed by ADR-013.
 type: application
 version: 0.1.0
-appVersion: "0.119.0"
+appVersion: "0.157.2"
 keywords:
   - opentelemetry
   - otel
@@ -24,5 +24,5 @@ dependencies:
     # Pin to a specific minor; bump in lockstep with the contrib image.
     # The contrib distribution (not "core") is required for the
     # `tail_sampling` and `loki` exporter components.
-    version: "0.119.0"
+    version: "0.157.2"
     repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"

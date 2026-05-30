@@ -11,13 +11,16 @@ prometheus-fastapi-instrumentator==7.1.0
 # to leave a future direct-Redis-client option open.
 redis==5.0.8
 
-# OpenTelemetry — added in p6.2 (ADR-013).
-# API/SDK/exporter are on the 1.x stable train; instrumentations are
-# on the matching 0.50b0 pre-release train (this is the upstream
-# release convention, not "beta quality"). Bump as a pair.
-opentelemetry-api==1.29.0
-opentelemetry-sdk==1.29.0
-opentelemetry-exporter-otlp-proto-grpc==1.29.0
-opentelemetry-instrumentation-fastapi==0.50b0
-opentelemetry-instrumentation-httpx==0.50b0
-opentelemetry-instrumentation-redis==0.50b0
+# OpenTelemetry — added in p6.2 (ADR-013), pinned to current in the
+# p6 currency pass. API/SDK/exporter ride the 1.x stable train;
+# instrumentations ride the matching 0.63b1 pre-release train. The
+# SDK 1.42.x <-> instrumentation 0.63bx pairing is the upstream
+# release convention (the 0.xxb suffix is a versioning scheme, not a
+# quality signal). Bump as a pair — Renovate flags the instrumentation
+# minor bumps as needs-review (see .github/renovate.json).
+opentelemetry-api==1.42.1
+opentelemetry-sdk==1.42.1
+opentelemetry-exporter-otlp-proto-grpc==1.42.1
+opentelemetry-instrumentation-fastapi==0.63b1
+opentelemetry-instrumentation-httpx==0.63b1
+opentelemetry-instrumentation-redis==0.63b1

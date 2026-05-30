@@ -1,6 +1,7 @@
 # Wrapper values for the open-telemetry/opentelemetry-collector
-# dependency. All knobs nested under the dependency's chart name.
-# See ADR-013 for design + tail-sampling rationale.
+# dependency (chart 0.157.2, collector appVersion 0.152.0 — pinned in
+# the p6 currency pass). All knobs nested under the dependency's chart
+# name. See ADR-013 for design + tail-sampling rationale.
 opentelemetry-collector:
   # Contrib distribution is required for the tail_sampling processor
   # and the loki / prometheusremotewrite exporters. Core does not

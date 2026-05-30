@@ -1,6 +1,11 @@
-# Standalone ArgoCD Application for grafana/loki — multi-source pattern
-# matching k8s/apps/monitoring.yaml (chart from upstream + values from
-# this repo). Loki is deployed in `observability` namespace.
+# Standalone ArgoCD Application for Loki — multi-source pattern matching
+# k8s/apps/monitoring.yaml (chart from upstream + values from this repo).
+# Loki is deployed in `observability` namespace.
+#
+# Repo note: the OSS Loki chart moved from grafana/helm-charts to
+# grafana-community/helm-charts in 2026; we follow it to the maintained
+# successor (chart 17.x, Loki appVersion 3.7.x). Values render-verified
+# against the existing 05-observability-security/values/loki.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -14,9 +19,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://grafana.github.io/helm-charts
+    - repoURL: https://grafana-community.github.io/helm-charts
       chart: loki
-      targetRevision: "6.16.0"
+      targetRevision: "17.1.5"
       helm:
         releaseName: loki
         valueFiles:

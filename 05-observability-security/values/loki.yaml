@@ -1,5 +1,7 @@
-# grafana/loki values — SingleBinary deployment mode for portfolio scale.
-# Chart: grafana/loki @ 6.x (single-binary supported since 6.0).
+# Loki values — SingleBinary deployment mode for portfolio scale.
+# Chart: grafana-community/loki @ 17.x (the maintained OSS successor
+# after the chart moved off grafana/helm-charts in 2026). Loki
+# appVersion 3.7.x. Render-verified against this file.
 # Storage: local filesystem on a 10 GiB PVC. Retention: 14 days.
 # Documented portfolio-scope limitation: this won't scale beyond a
 # single-node ingest rate; production would use the chart's

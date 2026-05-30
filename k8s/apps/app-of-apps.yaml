@@ -12,17 +12,23 @@ spec:
           revision: HEAD
           directories:
           - path: k8s/workloads/*
-          # Exclude: otel-collector is deployed via a standalone
-          # ArgoCD Application at k8s/apps/otel-collector.yaml that
-          # handles its Helm dependency build. The matrix would
-          # generate a duplicate Application that fights with it.
+          # Standalone-managed workloads are excluded from the matrix
+          # ApplicationSet — each has a dedicated Application in k8s/apps/
+          # with sync behaviour the matrix can't express. This block is
+          # kept IDENTICAL across the p6 feature branches so the branches
+          # merge without conflicting on this file; excluding a path that
+          # does not yet exist on a given branch is harmless.
+          #   cloudflared            -> manual sync gate (prune+selfHeal off), ADR-012
+          #   argocd-config          -> kubectl-patch-only, NOT applied as manifests, ADR-012
+          #   otel-collector         -> Helm dependency build, ADR-013
+          #   gatekeeper-constraints -> sync-wave after gatekeeper webhook Healthy, ADR-016
+          - path: k8s/workloads/cloudflared
+            exclude: true
+          - path: k8s/workloads/argocd-config
+            exclude: true
           - path: k8s/workloads/otel-collector
             exclude: true
-          # Exclude: argocd-config holds strategic-merge patches
-          # for argocd-cm/argocd-rbac-cm that the operator applies
-          # manually (kubectl patch) — see ADR-012 / runbook. They
-          # are not standalone Kubernetes resources.
-          - path: k8s/workloads/argocd-config
+          - path: k8s/workloads/gatekeeper-constraints
             exclude: true
       - clusters: {}
   template:

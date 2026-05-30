@@ -84,6 +84,17 @@ def otel_init() -> None:
 
     # Logs — LoggerProvider wired into the stdlib logging via
     # LoggingHandler attached to the root logger.
+    #
+    # Deprecation note (OTel SDK 1.42): `LoggingHandler` from
+    # opentelemetry.sdk._logs emits a DeprecationWarning pointing at a
+    # handler in the separate `opentelemetry-instrumentation-logging`
+    # package. We deliberately keep the SDK handler for now: the OTel
+    # Python logs/log-export surface is still stabilising (the `_logs`
+    # module is underscore-private), and the replacement package's API
+    # is itself in flux. The current handler functions correctly and
+    # the warning is informational, fired once at construction. Migrate
+    # when the logs API graduates out of `_logs` — tracked as a Renovate
+    # `otel needs-review` follow-up (see .github/renovate.json).
     logger_provider = LoggerProvider(resource=resource)
     logger_provider.add_log_record_processor(
         BatchLogRecordProcessor(OTLPLogExporter(endpoint=endpoint, insecure=True))

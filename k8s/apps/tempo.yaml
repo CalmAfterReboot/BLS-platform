@@ -1,5 +1,10 @@
-# Standalone ArgoCD Application for grafana/tempo — multi-source pattern.
+# Standalone ArgoCD Application for Tempo — multi-source pattern.
 # Tempo is deployed in `observability` namespace alongside Loki.
+#
+# Repo note: grafana/tempo (single-binary) was DEPRECATED in 2026; the
+# maintained successor lives at grafana-community/helm-charts (chart
+# 2.x, Tempo appVersion 2.10.x). Values render-verified against the
+# existing 05-observability-security/values/tempo.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -13,9 +18,9 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: https://grafana.github.io/helm-charts
+    - repoURL: https://grafana-community.github.io/helm-charts
       chart: tempo
-      targetRevision: "1.10.1"
+      targetRevision: "2.2.0"
       helm:
         releaseName: tempo
         valueFiles:

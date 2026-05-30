@@ -1,6 +1,8 @@
-# grafana/tempo values — single-binary tempo for portfolio scale.
-# Chart: grafana/tempo @ 1.x (single-binary). Storage: local filesystem
-# on a 10 GiB PVC. Retention: 72 h per spec — traces grow fast.
+# Tempo values — single-binary tempo for portfolio scale.
+# Chart: grafana-community/tempo @ 2.x (the maintained OSS successor;
+# grafana/tempo single-binary was deprecated in 2026). Tempo
+# appVersion 2.10.x. Render-verified against this file. Storage: local
+# filesystem on a 10 GiB PVC. Retention: 72 h per spec — traces grow fast.
 # Documented portfolio-scope limitation: this won't scale beyond a
 # single-node ingest rate. Production = tempo-distributed + S3.
 # See ADR-013 §"Storage trade-offs".
