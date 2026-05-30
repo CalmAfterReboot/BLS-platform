@@ -26,7 +26,9 @@ variable "hostnames" {
   default = {
     "grafana" = "http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80"
     "argocd"  = "http://argocd-server.argocd.svc.cluster.local:80"
-    "gateway" = "http://gateway.llm-gateway.svc.cluster.local:80"
+    # Verified against the live cluster: the gateway Service is
+    # `llm-gateway-service` on :8000 (not `gateway:80`).
+    "gateway" = "http://llm-gateway-service.llm-gateway.svc.cluster.local:8000"
   }
 }
 

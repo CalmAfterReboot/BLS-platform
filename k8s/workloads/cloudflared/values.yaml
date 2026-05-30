@@ -36,7 +36,7 @@ ingress:
   - hostname: argocd.bluelayersystems.com
     service: http://argocd-server.argocd.svc.cluster.local:80
   - hostname: gateway.bluelayersystems.com
-    service: http://gateway.llm-gateway.svc.cluster.local:80
+    service: http://llm-gateway-service.llm-gateway.svc.cluster.local:8000
 
 networkPolicies:
   enabled: true

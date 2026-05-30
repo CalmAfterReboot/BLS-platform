@@ -95,8 +95,15 @@ resource "cloudflare_zero_trust_access_policy" "operator" {
     email = [var.operator_email]
   }
 
+  # Gate to the operator email, authenticated via the one-time-PIN IdP.
+  # The hard `auth_method = "mfa"` requirement was dropped because no
+  # MFA-capable IdP is configured yet — it would lock the operator out
+  # of argocd/gateway (which have no fallback policy). To restore true
+  # MFA later, add a Google/GitHub OAuth IdP and switch this back to
+  # `require { auth_method = "mfa" }`. The email include keeps this
+  # scoped to the operator regardless of login method.
   require {
-    auth_method = "mfa"
+    login_method = [cloudflare_zero_trust_access_identity_provider.otp.id]
   }
 }
 
